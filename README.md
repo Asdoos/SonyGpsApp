@@ -1,8 +1,16 @@
 # Sony GPS Link
 
+[![Release](https://img.shields.io/github/v/release/Asdoos/SonyGpsApp?style=flat-square)](https://github.com/Asdoos/SonyGpsApp/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/Asdoos/SonyGpsApp/release.yml?style=flat-square&label=build)](https://github.com/Asdoos/SonyGpsApp/actions)
+[![Android](https://img.shields.io/badge/Android-8.0%2B-green?style=flat-square&logo=android)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.9-purple?style=flat-square&logo=kotlin)](https://kotlinlang.org)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
 Android app that transfers GPS coordinates from a smartphone to Sony cameras via Bluetooth Low Energy (BLE) — without the original Sony Creators App.
 
-Reverse-engineered from **Sony Creators App v3.3.1** (XAPK, decompiled with jadx 1.5.5).
+> Reverse-engineered from **Sony Creators App v3.3.1** (XAPK, decompiled with jadx 1.5.5).
+
+**[⬇ Download latest APK](https://github.com/Asdoos/SonyGpsApp/releases/latest)**
 
 ---
 
