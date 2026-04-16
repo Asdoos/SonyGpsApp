@@ -6,7 +6,7 @@ app/build/
 # Gradle
 .gradle/
 **/local.properties
-gradle/wrapper/gradle-wrapper.jar
+# gradle/wrapper/gradle-wrapper.jar
 
 # Android Studio / IntelliJ
 .idea/
