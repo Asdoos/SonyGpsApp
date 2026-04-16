@@ -26,8 +26,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Decode Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > app/release.keystore
+        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > app/release.keystore
 
       - name: Build Release APK
         run: ./gradlew assembleRelease
@@ -37,19 +36,9 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_apk
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
-          files: ${{ steps.sign_apk.outputs.signedReleaseFile }}
+          files: app/build/outputs/apk/release/*.apk
           generate_release_notes: true
