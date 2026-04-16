@@ -1,0 +1,31 @@
+# Android build outputs
+build/
+app/build/
+**/build/
+
+# Gradle
+.gradle/
+**/local.properties
+gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin
+*.kotlin_module
+
+# Credentials & local config
+local.properties
+keystore.properties
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db

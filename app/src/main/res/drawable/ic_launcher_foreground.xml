@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Location pin -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20 C43,20 34,29 34,40 C34,55 54,80 54,80 C54,80 74,55 74,40 C74,29 65,20 54,20 Z M54,47 C50.1,47 47,43.9 47,40 C47,36.1 50.1,33 54,33 C57.9,33 61,36.1 61,40 C61,43.9 57.9,47 54,47 Z"/>
+    <!-- Small wifi/BLE arc below pin -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,85 Q54,81 62,85"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"/>
+</vector>
