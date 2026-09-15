@@ -428,7 +428,8 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
     }
 
     override fun onServiceLog(msg: String) {
-        log(msg)
+        // The service already wrote the line to DiagnosticLog — UI only
+        log(msg, persist = false)
         // The service ends a session without a dedicated callback (stop, reconnects exhausted)
         updateUi()
     }
@@ -477,7 +478,9 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         binding.tvModes.text = if (modes.isEmpty()) "Standard-Einstellungen" else modes.joinToString(" · ")
     }
 
-    private fun log(msg: String) {
+    /** Shows [msg] in the on-screen log; [persist] also writes it to the diagnostic log. */
+    private fun log(msg: String, persist: Boolean = true) {
+        if (persist) DiagnosticLog.log(this, "App", msg)
         val time = sdf.format(Date())
         logBuilder.insert(0, "[$time] $msg\n")
         if (logBuilder.length > 6000) logBuilder.setLength(6000)

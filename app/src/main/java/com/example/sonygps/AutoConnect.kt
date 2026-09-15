@@ -55,11 +55,11 @@ object AutoConnect {
         val address = prefs.cameraAddress
         if (!prefs.autoConnect || address == null || GpsForegroundService.sessionActive) return
         if (!hasScanPermission(context)) {
-            Log.w(TAG, "Not armed: scan permission missing")
+            diag(context, "Nicht aktiviert: Scan-Berechtigung fehlt")
             return
         }
         val scanner = scanner(context) ?: run {
-            Log.w(TAG, "Not armed: Bluetooth off")
+            diag(context, "Nicht aktiviert: Bluetooth aus")
             return
         }
         val filter = ScanFilter.Builder()
@@ -74,9 +74,9 @@ object AutoConnect {
             val pi = scanPendingIntent(context)
             scanner.stopScan(pi)   // re-arming must not stack scans
             val rc = scanner.startScan(listOf(filter), settings, pi)
-            if (rc != 0) Log.w(TAG, "startScan failed: $rc") else Log.i(TAG, "Armed for $address")
+            diag(context, if (rc != 0) "Hintergrund-Scan fehlgeschlagen: $rc" else "Hintergrund-Scan aktiv für $address")
         } catch (e: Exception) {
-            Log.w(TAG, "Arming failed", e)
+            diag(context, "Aktivieren fehlgeschlagen", e)
         }
     }
 
@@ -84,7 +84,7 @@ object AutoConnect {
         try {
             scanner(context)?.stopScan(scanPendingIntent(context))
         } catch (e: Exception) {
-            Log.w(TAG, "Disarming failed", e)
+            diag(context, "Deaktivieren fehlgeschlagen", e)
         }
     }
 
@@ -111,16 +111,28 @@ object AutoConnect {
         // Without background location, a location-type foreground service started from
         // the background gets no fixes (and throws on Android 14) → let the user tap instead.
         if (!hasBackgroundLocation(context)) {
+            diag(context, "Kamera in der Nähe — kein Standort im Hintergrund, zeige Benachrichtigung")
             showNearbyNotification(context, prefs.cameraName)
             return
         }
         try {
             ContextCompat.startForegroundService(context, GpsForegroundService.connectIntent(context))
-            Log.i(TAG, "Camera nearby — session started")
+            diag(context, "Kamera in der Nähe — Sitzung gestartet")
         } catch (e: Exception) {
             // ForegroundServiceStartNotAllowedException (Android 12+, app not exempt)
-            Log.w(TAG, "Background start refused — showing notification", e)
+            diag(context, "Start aus dem Hintergrund verweigert — zeige Benachrichtigung", e)
             showNearbyNotification(context, prefs.cameraName)
+        }
+    }
+
+    /** Logcat + persistent diagnostic log; auto-connect runs while nobody is watching. */
+    internal fun diag(context: Context, msg: String, e: Throwable? = null) {
+        if (e == null) {
+            Log.i(TAG, msg)
+            DiagnosticLog.log(context, TAG, msg)
+        } else {
+            Log.w(TAG, msg, e)
+            DiagnosticLog.log(context, TAG, msg, e)
         }
     }
 
@@ -176,7 +188,7 @@ object AutoConnect {
 class CameraNearbyReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.hasExtra(BluetoothLeScanner.EXTRA_ERROR_CODE)) {
-            Log.w("AutoConnect", "Background scan error: ${intent.getIntExtra(BluetoothLeScanner.EXTRA_ERROR_CODE, 0)}")
+            AutoConnect.diag(context, "Hintergrund-Scan-Fehler: ${intent.getIntExtra(BluetoothLeScanner.EXTRA_ERROR_CODE, 0)}")
             return
         }
         AutoConnect.onCameraNearby(context)
@@ -187,8 +199,12 @@ class CameraNearbyReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED -> AutoConnect.arm(context)
+            Intent.ACTION_BOOT_COMPLETED -> {
+                AutoConnect.diag(context, "Gerät neu gestartet")
+                AutoConnect.arm(context)
+            }
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                AutoConnect.diag(context, "App aktualisiert auf ${UpdateChecker.installedVersion(context) ?: "?"}")
                 // The update APK has done its job — free the cache
                 UpdateChecker.clearDownloads(context)
                 AutoConnect.arm(context)

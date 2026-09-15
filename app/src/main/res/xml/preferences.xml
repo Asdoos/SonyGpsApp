@@ -59,6 +59,21 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="Fehlersuche">
+
+        <Preference
+            android:key="export_diagnostics"
+            android:title="Diagnose exportieren"
+            android:summary="Geräte-Infos, Berechtigungen, Einstellungen und das Protokoll der letzten Sitzungen als Textdatei teilen"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="clear_diagnostics"
+            android:title="Protokoll löschen"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="Info">
 
         <Preference

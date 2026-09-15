@@ -18,6 +18,13 @@
 
     <!-- ── Foreground Service ───────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!--
+        Partial wake lock for the session: the 5 s packet ticker and the APO
+        keepalive run on Handler timers, which stand still while the CPU is in
+        deep sleep. In battery-saver mode nothing else wakes the CPU between
+        fixes, so without the lock the camera loses its position every cycle.
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!--
         Required on Android 14+ (API 34) for foreground services that use location.

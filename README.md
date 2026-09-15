@@ -20,8 +20,8 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 |---|---|
 | BLE camera discovery | Scan for Sony devices (manufacturer ID 301) |
 | GPS transfer | WGS-84, every 5 seconds, 91 or 95-byte packet |
-| Battery saver | Fixes every 10–60 s with balanced priority; the camera still gets a packet every 5 s |
-| Settings screen | Auto-connect, battery saver, GPX recording, track sharing, battery-optimization shortcut |
+| Battery saver | Fixes every 10–60 s with balanced priority; the camera still gets a packet every 5 s. A partial wake lock keeps the CPU timers running with the screen off |
+| Settings screen | Auto-connect, battery saver, GPX recording, track sharing, battery-optimization shortcut, diagnostics export |
 | APO keepalive | Prevents camera sleep mode, every 9 seconds |
 | Auto-reconnect | Up to 10 attempts after unexpected disconnection |
 | Foreground Service | GPS + BLE run persistently, even with the app closed |
@@ -30,6 +30,7 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 | GPX track recording | Every fix of a session is written to a GPX file for geotagging photos later |
 | In-app update | Checks GitHub releases once a day, downloads the new APK and opens the installer |
 | Quick Settings tile | Start or stop the session from the notification shade without opening the app |
+| Diagnostics export | Persistent log of all sessions plus device, permission and settings snapshot, shared as a text file for bug reports |
 
 ---
 
@@ -379,13 +380,14 @@ SonyGpsApp/
 │   │   ├── AutoConnect.kt            Background scan for the remembered camera + receivers
 │   │   ├── CameraPrefs.kt            Persistent settings (remembered camera, switches)
 │   │   ├── TrackRecorder.kt          GPX track recording
+│   │   ├── DiagnosticLog.kt          Persistent diagnostic log + report for the export
 │   │   ├── UpdateChecker.kt          In-app update from GitHub releases
 │   │   └── SessionTileService.kt     Quick Settings tile: start/stop the session
 │   ├── res/
 │   │   ├── layout/activity_main.xml
 │   │   ├── drawable/ic_launcher_*.xml
 │   │   ├── mipmap-anydpi-v26/
-│   │   ├── xml/file_paths.xml        FileProvider paths for GPX sharing and update APKs
+│   │   ├── xml/file_paths.xml        FileProvider paths for GPX/diagnostics sharing and update APKs
 │   │   ├── xml/preferences.xml       Settings screen definition
 │   │   ├── menu/main_menu.xml        Action bar: settings entry
 │   │   └── values/themes.xml, colors.xml

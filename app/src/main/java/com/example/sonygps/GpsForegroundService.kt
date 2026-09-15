@@ -36,7 +36,17 @@ import com.google.android.gms.location.*
  * sent to the camera every 5 s (SEND_INTERVAL) with a fresh timestamp — the camera
  * flags its position as invalid when packets stop for more than a few seconds,
  * while the expensive part is the GPS chip, not the BLE write. Without a fix for
- * MAX_FIX_AGE the sending stops so the camera honestly shows "no GPS".
+ * maxFixAge (3 fix intervals, at least 60 s) the sending stops so the camera
+ * honestly shows "no GPS".
+ *
+ * Wake lock: the ticker and the APO keepalive are Handler timers, i.e. based on
+ * uptimeMillis, which does not advance while the CPU is in deep sleep. A foreground
+ * service does not keep the CPU awake by itself. In normal mode the GPS fix every
+ * 5 s wakes it anyway; in battery-saver mode there are 20–60 s between fixes and
+ * the packets stopped with the screen off, so the camera toggled between valid and
+ * invalid. A partial wake lock (CPU only, no screen) is held for the whole session.
+ * The saving of the battery-saver mode comes from the idle GPS chip, not from a
+ * sleeping CPU — the BLE write every 5 s needs the CPU anyway.
  */
 class GpsForegroundService : Service(), SonyCameraGatt.Listener {
 
@@ -79,15 +89,26 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     private val handler          = Handler(Looper.getMainLooper())
     private val reconnectRunnable = Runnable { attemptReconnect() }
 
-    /** Latest usable fix; sent to the camera by [sendRunnable] until it is older than MAX_FIX_AGE. */
+    /** Latest usable fix; sent to the camera by [sendRunnable] until it is older than [maxFixAge]. */
     private var lastFix: Location? = null
     private var staleLogged = false
+    /** elapsedRealtime of the last ticker run; detects a ticker that stood still (CPU asleep). */
+    private var lastTickElapsed = 0L
     private val sendRunnable = object : Runnable {
         override fun run() {
+            val now = SystemClock.elapsedRealtime()
+            if (lastTickElapsed != 0L) {
+                val gapMs = now - lastTickElapsed
+                if (gapMs > TICK_GAP_WARN) log("Sende-Takt ${gapMs / 1000} s ausgesetzt (Gerät im Tiefschlaf?)")
+            }
+            lastTickElapsed = now
             sendLatestFix()
             handler.postDelayed(this, SEND_INTERVAL)
         }
     }
+
+    /** Keeps the CPU awake for the session so the Handler timers keep firing with the screen off. */
+    private var wakeLock: PowerManager.WakeLock? = null
 
     /** Settings changed in SettingsActivity apply to the running session. */
     private val prefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -104,7 +125,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         private const val MAX_RECONNECT     = 10
         private const val NORMAL_INTERVAL   = 5_000L   // ms, fix request in normal mode
         private const val SEND_INTERVAL     = 5_000L   // ms, packet cadence towards the camera
-        private const val MAX_FIX_AGE       = 60_000L  // ms, stop sending when the fix is older
+        private const val MIN_FIX_AGE_LIMIT = 60_000L  // ms, lower bound for maxFixAge
+        private const val TICK_GAP_WARN     = 10_000L  // ms, log when the ticker paused longer
         private const val RECONNECT_DELAY   = 4_000L   // ms
 
         /** True from connect until the session ends (stop, reconnects exhausted). */
@@ -158,6 +180,14 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     private val wantedInterval: Long
         get() = if (prefs.batterySaver) prefs.saverIntervalMs else NORMAL_INTERVAL
 
+    /**
+     * Sending stops when the fix is older than this: three fix intervals, at least
+     * 60 s. A fixed 60 s equalled the largest saver interval, so one slightly late
+     * fix already caused a gap.
+     */
+    private val maxFixAge: Long
+        get() = maxOf(MIN_FIX_AGE_LIMIT, 3 * wantedInterval)
+
     @SuppressLint("MissingPermission")
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -186,7 +216,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         if (!isReady) return
         val fix = lastFix ?: return
         val ageMs = (SystemClock.elapsedRealtimeNanos() - fix.elapsedRealtimeNanos) / 1_000_000L
-        if (ageMs > MAX_FIX_AGE) {
+        if (ageMs > maxFixAge) {
             if (!staleLogged) {
                 staleLogged = true
                 log("Kein aktueller Fix seit ${ageMs / 1000} s — sende nichts mehr")
@@ -215,12 +245,15 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         createNotificationChannel(this)
         // Start foreground immediately so Android doesn't kill us before a camera is connected
         startForeground(NOTIF_ID, buildNotification("Bereit…"))
+        DiagnosticLog.log(this, "Service", "Service gestartet")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP    -> stopTransfer()
             ACTION_CONNECT -> connectByAddress(intent.getStringExtra(EXTRA_ADDRESS))
+            // START_STICKY restart after the process was killed: the session state is lost
+            null           -> DiagnosticLog.log(this, "Service", "Vom System neu gestartet (Prozess wurde beendet)")
         }
         // START_STICKY: system restarts the service if killed (with null intent)
         return START_STICKY
@@ -240,6 +273,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
             setSessionActive(false)
             AutoConnect.arm(this)
         }
+        DiagnosticLog.log(this, "Service", "Service beendet")
     }
 
     // ── Public API (called by MainActivity via binder) ────────────────────────
@@ -249,6 +283,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         if (!sessionActive) {
             setSessionActive(true)
             AutoConnect.disarm(this)
+            acquireWakeLock()
         }
         AutoConnect.cancelNearbyNotification(this)
         handler.removeCallbacks(reconnectRunnable)
@@ -291,6 +326,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         startGps()
         // Packet ticker: sends the latest fix every SEND_INTERVAL (also across reconnects)
         handler.removeCallbacks(sendRunnable)
+        lastTickElapsed = 0L   // the pause during a reconnect is not a ticker stall
         handler.post(sendRunnable)
         statusListener?.onServiceReady()
     }
@@ -443,8 +479,31 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     /** Updates the session flag and pushes the new state to the Quick Settings tile. */
     private fun setSessionActive(active: Boolean) {
         sessionActive = active
-        if (!active) readyForGps = false
+        if (!active) {
+            readyForGps = false
+            releaseWakeLock()
+        }
         SessionTileService.requestUpdate(this)
+    }
+
+    /** No timeout: a session may last for hours; the lock is released with the session. */
+    @SuppressLint("WakelockTimeout")
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        val lock = wakeLock ?: getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SonyGpsLink:session")
+            .apply { setReferenceCounted(false) }
+            .also { wakeLock = it }
+        lock.acquire()
+        log("WakeLock gehalten — CPU bleibt für den 5-s-Takt wach")
+    }
+
+    private fun releaseWakeLock() {
+        val lock = wakeLock ?: return
+        if (lock.isHeld) {
+            lock.release()
+            log("WakeLock freigegeben")
+        }
     }
 
     private fun shutdownAndStop() {
@@ -461,7 +520,9 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         // onDisconnected() will call finishSession() once BLE confirms
     }
 
+    /** Goes to the bound activity (if any) and always to the persistent diagnostic log. */
     private fun log(msg: String) {
+        DiagnosticLog.log(this, "Service", msg)
         statusListener?.onServiceLog(msg)
     }
 

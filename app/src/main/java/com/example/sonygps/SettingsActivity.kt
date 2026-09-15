@@ -84,6 +84,16 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            findPreference<Preference>("export_diagnostics")?.setOnPreferenceClickListener {
+                confirmExportDiagnostics()
+                true
+            }
+
+            findPreference<Preference>("clear_diagnostics")?.setOnPreferenceClickListener {
+                confirmClearDiagnostics()
+                true
+            }
+
             findPreference<Preference>("version")?.summary =
                 UpdateChecker.installedVersion(requireContext())?.toString() ?: "?"
         }
@@ -91,6 +101,7 @@ class SettingsActivity : AppCompatActivity() {
         override fun onResume() {
             super.onResume()
             updateBatterySummary()
+            updateDiagnosticsSummary()
         }
 
         // ── Auto-connect ────────────────────────────────────────────────────────
@@ -190,6 +201,69 @@ class SettingsActivity : AppCompatActivity() {
             send.type = "application/gpx+xml"
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             startActivity(Intent.createChooser(send, "GPX-Track teilen"))
+        }
+
+        // ── Diagnostics ─────────────────────────────────────────────────────────
+
+        private fun updateDiagnosticsSummary() {
+            val ctx = context ?: return
+            val kb  = (DiagnosticLog.size(ctx) + 1023) / 1024
+            findPreference<Preference>("clear_diagnostics")?.apply {
+                summary   = if (kb == 0L) "Protokoll ist leer" else "Derzeit $kb KB gespeichert"
+                isEnabled = kb > 0
+            }
+        }
+
+        /** The report contains the camera address and positions — say so before sharing. */
+        private fun confirmExportDiagnostics() {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Diagnose exportieren")
+                .setMessage(
+                    "Die Textdatei enthält Gerätemodell, Android-Version, Berechtigungen, Einstellungen " +
+                    "und das Protokoll der letzten Sitzungen. Darin stehen die Bluetooth-Adresse der Kamera " +
+                    "und die übertragenen GPS-Positionen.\n\n" +
+                    "Hilfreich für Fehlerberichte auf GitHub — bitte vorher prüfen, was geteilt wird."
+                )
+                .setPositiveButton("Teilen") { _, _ -> exportDiagnostics() }
+                .setNegativeButton("Abbrechen", null)
+                .show()
+        }
+
+        private fun exportDiagnostics() {
+            val ctx = requireContext().applicationContext
+            // writeReport blocks on the log writer thread and reads the whole log → off the main thread
+            Thread {
+                val result = runCatching { DiagnosticLog.writeReport(ctx) }
+                activity?.runOnUiThread {
+                    if (!isAdded) return@runOnUiThread
+                    result.onSuccess { shareDiagnostics(it) }
+                          .onFailure { toast("Export fehlgeschlagen: ${it.message}") }
+                }
+            }.start()
+        }
+
+        private fun shareDiagnostics(file: File) {
+            val ctx = requireContext()
+            val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+            val send = Intent(Intent.ACTION_SEND)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .putExtra(Intent.EXTRA_SUBJECT, "Sony GPS Link — Diagnose")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivity(Intent.createChooser(send, "Diagnose teilen"))
+        }
+
+        private fun confirmClearDiagnostics() {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Protokoll löschen?")
+                .setMessage("Das gespeicherte Diagnose-Protokoll wird entfernt. Die GPX-Tracks bleiben erhalten.")
+                .setPositiveButton("Löschen") { _, _ ->
+                    DiagnosticLog.clear(requireContext())
+                    updateDiagnosticsSummary()
+                    toast("Protokoll gelöscht")
+                }
+                .setNegativeButton("Abbrechen", null)
+                .show()
         }
 
         private fun toast(msg: String) =

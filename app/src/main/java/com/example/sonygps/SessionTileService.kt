@@ -48,6 +48,7 @@ class SessionTileService : TileService() {
             } catch (e: Exception) {
                 // ForegroundServiceStartNotAllowedException — let the app do it in the foreground
                 Log.w(TAG, "Start from tile refused — opening app", e)
+                DiagnosticLog.log(this, TAG, "Start über Kachel verweigert — öffne App", e)
                 openApp()
             }
         }
