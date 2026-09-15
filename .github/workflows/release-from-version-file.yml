@@ -7,6 +7,9 @@ on:
     paths:
       - 'release.version'
 
+permissions:
+  contents: write
+
 jobs:
   read-version:
     runs-on: ubuntu-latest
