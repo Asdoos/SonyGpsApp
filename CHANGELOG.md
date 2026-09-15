@@ -12,6 +12,8 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-15
+
 ### Geändert
 - **Neue Oberfläche:** Der Hauptbildschirm zeigt jetzt eine große Statuskarte mit
   klaren Meldungen („Standort wird übertragen“ statt „GPS aktiv — APO-Keepalive“),
@@ -101,7 +103,8 @@ Regeln für Einträge:
 - Erste Version: BLE-Suche nach Sony-Kameras, GPS-Übertragung alle 5 s,
   APO-Keepalive, automatischer Reconnect, Foreground-Service.
 
-[Unreleased]: https://github.com/Asdoos/SonyGpsApp/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Asdoos/SonyGpsApp/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.4.0...v0.5.0
