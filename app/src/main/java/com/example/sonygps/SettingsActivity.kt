@@ -32,15 +32,30 @@ import java.io.File
  */
 class SettingsActivity : AppCompatActivity() {
 
+    /** Manual update check from the version entry; the dialogs need an activity. */
+    lateinit var updates: UpdateFlow
+        private set
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         title = getString(R.string.menu_settings)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        updates = UpdateFlow(this) { DiagnosticLog.log(this, "App", it) }
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(android.R.id.content, SettingsFragment())
                 .commit()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updates.onResume()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        updates.destroy()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -101,8 +116,14 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            findPreference<Preference>("version")?.summary =
-                UpdateChecker.installedVersion(requireContext())?.toString() ?: "?"
+            findPreference<Preference>("version")?.apply {
+                summary = getString(R.string.pref_version_summary_fmt,
+                    UpdateChecker.installedVersion(requireContext())?.toString() ?: "?")
+                setOnPreferenceClickListener {
+                    (activity as? SettingsActivity)?.updates?.check(manual = true)
+                    true
+                }
+            }
         }
 
         override fun onResume() {

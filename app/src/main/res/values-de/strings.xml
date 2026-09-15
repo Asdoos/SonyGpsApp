@@ -3,21 +3,40 @@
 <resources>
 
     <!-- ── App / Hauptbildschirm ─────────────────────────────────────────── -->
-    <string name="app_tagline">Sendet GPS-Koordinaten via BLE an Sony-Kameras</string>
-    <string name="label_status">STATUS</string>
-    <string name="label_camera">KAMERA</string>
-    <string name="label_log">LOG</string>
     <string name="status_not_connected">Nicht verbunden</string>
-    <string name="camera_none">Keine Kamera gespeichert</string>
+    <string name="hint_no_camera">Schalte deine Kamera ein und suche sie unten.</string>
+    <string name="hint_camera_saved_fmt">Tippe auf Verbinden, um %s mit deinem Standort zu versorgen.</string>
+    <string name="hint_scanning">Stelle sicher, dass Bluetooth an der Kamera aktiviert ist.</string>
+    <string name="hint_connecting">Das dauert meist nur wenige Sekunden.</string>
+    <string name="hint_active_fmt">%s erhält deine Position. Du kannst die App jetzt schließen.</string>
+    <string name="hint_lost">Verbinde dich erneut, sobald du bereit bist.</string>
+    <string name="hint_scan_failed_fmt">Prüfe, ob Bluetooth eingeschaltet ist, und versuche es erneut. (Code %d)</string>
+    <string name="status_scan_failed">Suche fehlgeschlagen</string>
+    <string name="card_camera_title">Deine Kamera</string>
+    <string name="camera_none">Noch keine Kamera verbunden</string>
+    <string name="camera_none_hint">Nach der ersten Verbindung wird deine Kamera hier gespeichert.</string>
     <string name="default_camera_name">Sony-Kamera</string>
+    <string name="card_position_title">Aktuelle Position</string>
+    <string name="stat_accuracy">Genauigkeit</string>
+    <string name="stat_speed">Geschwindigkeit</string>
+    <string name="accuracy_fmt">±%.0f m</string>
+    <string name="speed_fmt">%d km/h</string>
+    <string name="coords_fmt">%1$.5f° %2$s, %3$.5f° %4$s</string>
+    <string name="hemi_e">O</string>
+    <string name="position_waiting">Warte auf GPS-Signal…</string>
+    <string name="section_activity">Aktivität</string>
+    <string name="activity_empty">Noch nichts passiert.</string>
     <string name="btn_connect">Verbinden</string>
-    <string name="btn_forget">Vergessen</string>
-    <string name="btn_check_update">Nach Updates suchen</string>
+    <string name="btn_forget">Kamera vergessen</string>
     <string name="btn_scan">Kamera suchen</string>
-    <string name="btn_stop_scan">Scan stoppen</string>
+    <string name="btn_scan_other">Andere Kamera suchen</string>
+    <string name="btn_stop_scan">Suche abbrechen</string>
     <string name="btn_disconnect">Trennen</string>
-    <string name="version_fmt">Version %s</string>
     <string name="menu_settings">Einstellungen</string>
+    <string name="signal_strong">starkes Signal</string>
+    <string name="signal_medium">mittleres Signal</string>
+    <string name="signal_weak">schwaches Signal</string>
+    <string name="camera_item_fmt">%1$s · %2$s</string>
 
     <!-- Gemeinsame Schaltflächen -->
     <string name="cancel">Abbrechen</string>
@@ -34,12 +53,11 @@
     <!-- Hauptbildschirm: Scan / Verbinden -->
     <string name="log_service_bound">Service verbunden</string>
     <string name="toast_enable_bluetooth">Bluetooth einschalten</string>
-    <string name="status_scanning">Suche nach Sony-Kameras…</string>
+    <string name="status_scanning">Kamera wird gesucht…</string>
     <string name="log_scan_started">BLE-Scan gestartet</string>
     <string name="log_scan_stopped_fmt">Scan gestoppt — %d Kamera(s) gefunden</string>
     <string name="log_found_fmt">Gefunden: %1$s (%2$s) %3$d dBm</string>
     <string name="log_scan_failed_fmt">Scan-Fehler: %d</string>
-    <string name="status_scan_failed_fmt">Scan fehlgeschlagen (Code %d)</string>
     <string name="dialog_choose_camera">Kamera auswählen</string>
     <string name="status_connecting_fmt">Verbinde mit %s…</string>
     <string name="log_connecting_fmt">Starte Service und verbinde mit %s</string>
@@ -50,16 +68,16 @@
     <string name="log_denied_permissions_fmt">Verweigerte Berechtigungen: %s</string>
 
     <!-- Hauptbildschirm: Sitzungsstatus -->
-    <string name="status_connected_protocol">Verbunden — GPS-Protokoll…</string>
+    <string name="status_connected_protocol">Verbindung wird eingerichtet…</string>
     <string name="log_gatt_connected">GATT verbunden</string>
-    <string name="status_gps_active">✓ GPS aktiv — Koordinaten werden gesendet</string>
+    <string name="status_gps_active">Standort wird übertragen</string>
     <string name="log_gps_active">GPS aktiv, APO-Keepalive alle 9 s</string>
-    <string name="status_disconnected">Getrennt</string>
+    <string name="status_disconnected">Verbindung beendet</string>
     <string name="log_disconnected">Verbindung getrennt</string>
     <string name="mode_auto_connect">Auto-Verbinden</string>
     <string name="mode_battery_saver_fmt">Akku sparen (%d s)</string>
     <string name="mode_gpx">GPX-Aufzeichnung</string>
-    <string name="modes_default">Standard-Einstellungen</string>
+    <string name="modes_default">Gespeichert · Standardeinstellungen</string>
 
     <!-- Hauptbildschirm: In-App-Update -->
     <string name="log_checking_updates">Suche nach Updates…</string>
@@ -187,6 +205,7 @@
 
     <string name="pref_cat_info">Info</string>
     <string name="pref_version_title">Version</string>
+    <string name="pref_version_summary_fmt">%s · Tippen, um nach Updates zu suchen</string>
     <string name="pref_github_title">Projekt auf GitHub</string>
 
     <!-- ── Diagnose-Bericht ──────────────────────────────────────────────── -->

@@ -246,7 +246,7 @@ Photos taken while the BLE link was down carry no coordinates; the track closes 
 
 The app is distributed as an APK from GitHub releases, not through a store, so it updates itself (`UpdateChecker`):
 
-1. On app start — at most once every 24 hours — and on **"Nach Updates suchen"**, the app queries `https://api.github.com/repos/Asdoos/SonyGpsApp/releases/latest` (anonymous, 60 requests/hour allowed).
+1. On app start — at most once every 24 hours — and when the user taps the version entry in the settings, the app queries `https://api.github.com/repos/Asdoos/SonyGpsApp/releases/latest` (anonymous, 60 requests/hour allowed).
 2. The release tag (`v0.3.0`) is compared numerically with the installed `versionName`. Releases without an `.apk` asset are treated as "no update".
 3. If newer, a dialog shows the release notes with **Installieren**, **Später** and **Überspringen** (that tag is not offered again automatically; a manual check still shows it).
 4. **Installieren** downloads the APK into the app cache (`cacheDir/updates/`, with progress) and hands it to the system package installer via `FileProvider`. Android 8+ asks once to allow installs from this app (`REQUEST_INSTALL_PACKAGES`); the install continues when the user returns.

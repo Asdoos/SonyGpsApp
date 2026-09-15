@@ -1,226 +1,373 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    Main screen. One hero card tells the user what is going on, one primary
+    button does the obvious next thing. Everything technical (log lines) sits
+    in a collapsed "Activity" section at the bottom. Colours come from the
+    Material 3 theme so the screen follows light/dark and dynamic colour.
+-->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#FF121212">
+    android:fillViewport="true"
+    android:clipToPadding="false">
 
-    <!-- Header -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/app_name"
-        android:textColor="#FFFFFFFF"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:paddingBottom="4dp"/>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/app_tagline"
-        android:textColor="#FF888888"
-        android:textSize="12sp"
-        android:paddingBottom="16dp"/>
-
-    <!-- Status card -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#FF1E1E1E"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="24dp">
 
-        <TextView
+        <!-- ── Hero: session status ─────────────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardStatus"
+            style="@style/Widget.Material3.CardView.Filled"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/label_status"
-            android:textColor="#FF888888"
-            android:textSize="10sp"
-            android:letterSpacing="0.15"
-            android:paddingBottom="4dp"/>
+            app:cardCornerRadius="28dp"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer">
 
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/status_not_connected"
-            android:textColor="#FFFFFFFF"
-            android:textSize="15sp"/>
-
-    </LinearLayout>
-
-    <!-- GPS card -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#FF1E1E1E"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_gps"
-            android:textColor="#FF888888"
-            android:textSize="10sp"
-            android:letterSpacing="0.15"
-            android:paddingBottom="4dp"/>
-
-        <TextView
-            android:id="@+id/tvGps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="—"
-            android:textColor="#FF00CC66"
-            android:textSize="14sp"
-            android:fontFamily="monospace"/>
-
-    </LinearLayout>
-
-    <!-- Camera card: remembered camera (settings live in SettingsActivity) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#FF1E1E1E"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_camera"
-            android:textColor="#FF888888"
-            android:textSize="10sp"
-            android:letterSpacing="0.15"
-            android:paddingBottom="4dp"/>
-
-        <TextView
-            android:id="@+id/tvCamera"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/camera_none"
-            android:textColor="#FFFFFFFF"
-            android:textSize="15sp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnConnectLast"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:textColor="@color/text_button"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/btn_connect"
-                android:enabled="false"/>
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingTop="32dp"
+                android:paddingBottom="28dp"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp">
 
-            <Button
-                android:id="@+id/btnForget"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:textColor="@color/text_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_forget"
-                android:enabled="false"/>
+                <FrameLayout
+                    android:id="@+id/statusIconFrame"
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:background="@drawable/bg_status_circle"
+                    android:backgroundTint="?attr/colorSurfaceVariant">
 
-        </LinearLayout>
+                    <ImageView
+                        android:id="@+id/ivStatus"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_bluetooth_disabled"
+                        app:tint="?attr/colorOnSurfaceVariant"
+                        android:contentDescription="@null"/>
+                </FrameLayout>
 
-        <TextView
-            android:id="@+id/tvModes"
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                    android:textColor="?attr/colorOnSurface"
+                    android:text="@string/status_not_connected"/>
+
+                <TextView
+                    android:id="@+id/tvStatusHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:text="@string/hint_no_camera"/>
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:indeterminate="true"
+                    android:visibility="invisible"
+                    app:trackCornerRadius="2dp"
+                    tools:visibility="visible"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Actions ──────────────────────────────────────────────────── -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPrimary"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#FF888888"
-            android:textSize="12sp"
-            android:paddingTop="4dp"/>
+            android:layout_height="56dp"
+            android:layout_marginTop="20dp"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            app:cornerRadius="28dp"
+            app:iconGravity="textStart"
+            app:iconPadding="10dp"
+            app:icon="@drawable/ic_bluetooth_searching"
+            android:text="@string/btn_scan"/>
 
-    </LinearLayout>
-
-    <!-- App version + update check -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="4dp">
-
-        <TextView
-            android:id="@+id/tvVersion"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/version_fmt"
-            android:textColor="#FF888888"
-            android:textSize="12sp"/>
-
-        <Button
-            android:id="@+id/btnCheckUpdate"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:textColor="@color/text_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_check_update"/>
-
-    </LinearLayout>
-
-    <!-- Buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="12dp">
-
-        <Button
-            android:id="@+id/btnScan"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/btn_scan"
-            android:layout_marginEnd="8dp"/>
-
-        <Button
-            android:id="@+id/btnDisconnect"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
+        <!-- Replaces the primary button while a search or a session is running -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStop"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="20dp"
+            android:visibility="gone"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            app:cornerRadius="28dp"
+            app:iconGravity="textStart"
+            app:iconPadding="10dp"
+            app:icon="@drawable/ic_link_off"
             android:text="@string/btn_disconnect"
-            android:enabled="false"/>
+            tools:visibility="visible"/>
 
-    </LinearLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSecondary"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            android:text="@string/btn_scan_other"
+            tools:visibility="visible"/>
 
-    <!-- Log -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/label_log"
-        android:textColor="#FF888888"
-        android:textSize="10sp"
-        android:letterSpacing="0.15"
-        android:paddingBottom="4dp"/>
+        <!-- ── Position (only while sending) ─────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPosition"
+            style="@style/Widget.Material3.CardView.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone"
+            app:cardCornerRadius="20dp"
+            tools:visibility="visible">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#FF1E1E1E"
-        android:padding="8dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.SonyGpsApp.Overline"
+                    android:text="@string/card_position_title"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_my_location"
+                            app:tint="?attr/colorPrimary"
+                            android:contentDescription="@null"/>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvAccuracy"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceTitleLarge"
+                                android:textColor="?attr/colorOnSurface"
+                                tools:text="±4 m"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceBodySmall"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:text="@string/stat_accuracy"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_speed"
+                            app:tint="?attr/colorPrimary"
+                            android:contentDescription="@null"/>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvSpeed"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceTitleLarge"
+                                android:textColor="?attr/colorOnSurface"
+                                tools:text="12 km/h"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceBodySmall"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:text="@string/stat_speed"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvCoords"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:text="@string/position_waiting"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Saved camera ─────────────────────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCamera"
+            style="@style/Widget.Material3.CardView.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            app:cardCornerRadius="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp">
+
+                <FrameLayout
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_status_circle"
+                    android:backgroundTint="?attr/colorSecondaryContainer">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_camera"
+                        app:tint="?attr/colorOnSecondaryContainer"
+                        android:contentDescription="@null"/>
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.SonyGpsApp.Overline"
+                        android:text="@string/card_camera_title"/>
+
+                    <TextView
+                        android:id="@+id/tvCamera"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface"
+                        android:text="@string/camera_none"/>
+
+                    <TextView
+                        android:id="@+id/tvModes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:text="@string/camera_none_hint"/>
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnForget"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    app:icon="@drawable/ic_link_off"
+                    app:iconTint="?attr/colorOnSurfaceVariant"
+                    android:contentDescription="@string/btn_forget"
+                    android:visibility="gone"
+                    tools:visibility="visible"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Activity (collapsed by default) ───────────────────────────── -->
+        <LinearLayout
+            android:id="@+id/rowActivity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:text="@string/section_activity"/>
+
+            <ImageView
+                android:id="@+id/ivActivityChevron"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_expand_more"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:contentDescription="@null"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvLog"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="11sp"
-            android:textColor="#FFAAAAAA"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="8dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:fontFamily="monospace"
-            android:text=""/>
+            android:visibility="gone"
+            android:text="@string/activity_empty"
+            tools:visibility="visible"/>
 
-    </ScrollView>
-
-</LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

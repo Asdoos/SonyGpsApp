@@ -8,6 +8,7 @@
 
         <ListPreference
             android:key="app_language"
+            android:icon="@drawable/ic_language"
             android:title="@string/pref_language_title"
             android:entries="@array/language_labels"
             android:entryValues="@array/language_values"
@@ -21,6 +22,7 @@
 
         <SwitchPreferenceCompat
             android:key="auto_connect"
+            android:icon="@drawable/ic_bluetooth_searching"
             android:title="@string/pref_auto_connect_title"
             android:summary="@string/pref_auto_connect_summary"
             android:defaultValue="false"
@@ -28,6 +30,7 @@
 
         <Preference
             android:key="battery_exemption"
+            android:icon="@drawable/ic_battery"
             android:title="@string/pref_battery_exemption_title"
             android:summary="@string/pref_battery_exemption_summary"
             app:singleLineTitle="false" />
@@ -38,6 +41,7 @@
 
         <SwitchPreferenceCompat
             android:key="battery_saver"
+            android:icon="@drawable/ic_battery_saver"
             android:title="@string/pref_battery_saver_title"
             android:summary="@string/pref_battery_saver_summary"
             android:defaultValue="false"
@@ -45,6 +49,7 @@
 
         <ListPreference
             android:key="saver_interval_sec"
+            android:icon="@drawable/ic_timer"
             android:title="@string/pref_saver_interval_title"
             android:entries="@array/saver_interval_labels"
             android:entryValues="@array/saver_interval_values"
@@ -59,6 +64,7 @@
 
         <SwitchPreferenceCompat
             android:key="record_track"
+            android:icon="@drawable/ic_route"
             android:title="@string/pref_record_track_title"
             android:summary="@string/pref_record_track_summary"
             android:defaultValue="false"
@@ -66,6 +72,7 @@
 
         <Preference
             android:key="share_tracks"
+            android:icon="@drawable/ic_share"
             android:title="@string/pref_share_tracks_title"
             android:summary="@string/pref_share_tracks_summary"
             app:singleLineTitle="false" />
@@ -76,12 +83,14 @@
 
         <Preference
             android:key="export_diagnostics"
+            android:icon="@drawable/ic_bug_report"
             android:title="@string/pref_export_diag_title"
             android:summary="@string/pref_export_diag_summary"
             app:singleLineTitle="false" />
 
         <Preference
             android:key="clear_diagnostics"
+            android:icon="@drawable/ic_delete"
             android:title="@string/pref_clear_diag_title"
             app:singleLineTitle="false" />
 
@@ -91,11 +100,13 @@
 
         <Preference
             android:key="version"
+            android:icon="@drawable/ic_update"
             android:title="@string/pref_version_title"
-            android:selectable="false" />
+            app:singleLineTitle="false" />
 
         <Preference
             android:key="github"
+            android:icon="@drawable/ic_code"
             android:title="@string/pref_github_title"
             android:summary="github.com/Asdoos/SonyGpsApp">
             <intent

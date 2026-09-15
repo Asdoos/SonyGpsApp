@@ -12,6 +12,20 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+### Geändert
+- **Neue Oberfläche:** Der Hauptbildschirm zeigt jetzt eine große Statuskarte mit
+  klaren Meldungen („Standort wird übertragen“ statt „GPS aktiv — APO-Keepalive“),
+  eine einzige Hauptaktion (Kamera suchen / Verbinden / Trennen) und eine
+  Positionskarte mit Genauigkeit und Geschwindigkeit, solange gesendet wird.
+  Bluetooth-Adressen, Signalpegel in dBm und das Protokoll sind aus dem Blickfeld
+  verschwunden; das Protokoll lässt sich unter „Aktivität“ aufklappen.
+- Das Design folgt Material 3 und der System-Einstellung für Hell/Dunkel; ab
+  Android 12 übernimmt es die Farben des Hintergrundbilds.
+- Die Update-Prüfung ist von der Startseite in die Einstellungen gewandert:
+  Ein Tipp auf den Versionseintrag sucht nach Updates.
+- Die Einstellungen haben Symbole und die Kameraauswahl beschreibt die
+  Signalstärke in Worten.
+
 ## [0.7.0] - 2026-09-15
 
 ### Neu
