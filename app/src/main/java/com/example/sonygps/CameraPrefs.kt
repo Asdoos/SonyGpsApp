@@ -9,6 +9,8 @@ import android.content.Context
  *    next session can connect directly without a scan.
  *  - Auto-connect: start the session as soon as the remembered camera advertises.
  *  - Track recording: write every GPS fix of a session to a GPX file.
+ *  - Update check: when GitHub was last asked for a new release, and which
+ *    release the user chose to skip.
  */
 class CameraPrefs(context: Context) {
 
@@ -36,6 +38,16 @@ class CameraPrefs(context: Context) {
         get()  = prefs.getLong(KEY_LAST_ATTEMPT, 0L)
         set(v) = prefs.edit().putLong(KEY_LAST_ATTEMPT, v).apply()
 
+    /** Wall-clock time (ms) of the last automatic update check. */
+    var lastUpdateCheck: Long
+        get()  = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
+        set(v) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, v).apply()
+
+    /** Release tag the user dismissed with "skip"; not offered again automatically. */
+    var skippedUpdateTag: String?
+        get()  = prefs.getString(KEY_SKIPPED_UPDATE, null)
+        set(v) = prefs.edit().putString(KEY_SKIPPED_UPDATE, v).apply()
+
     fun rememberCamera(address: String, name: String?) {
         prefs.edit()
             .putString(KEY_ADDRESS, address)
@@ -54,5 +66,7 @@ class CameraPrefs(context: Context) {
         const val KEY_RECORD_TRACK = "record_track"
         const val KEY_SNOOZE_UNTIL = "auto_connect_snooze_until"
         const val KEY_LAST_ATTEMPT = "auto_connect_last_attempt"
+        const val KEY_LAST_UPDATE_CHECK = "last_update_check"
+        const val KEY_SKIPPED_UPDATE    = "skipped_update_tag"
     }
 }

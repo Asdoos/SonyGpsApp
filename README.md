@@ -26,6 +26,7 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 | Remembered camera | Stored after the first successful handshake — reconnect without scanning |
 | Auto-connect | Background BLE scan starts the session when the remembered camera is in range |
 | GPX track recording | Every fix of a session is written to a GPX file for geotagging photos later |
+| In-app update | Checks GitHub releases once a day, downloads the new APK and opens the installer |
 
 ---
 
@@ -236,6 +237,20 @@ Photos taken while the BLE link was down carry no coordinates; the track closes 
 
 ---
 
+### 6c. In-App Update
+
+The app is distributed as an APK from GitHub releases, not through a store, so it updates itself (`UpdateChecker`):
+
+1. On app start — at most once every 24 hours — and on **"Nach Updates suchen"**, the app queries `https://api.github.com/repos/Asdoos/SonyGpsApp/releases/latest` (anonymous, 60 requests/hour allowed).
+2. The release tag (`v0.3.0`) is compared numerically with the installed `versionName`. Releases without an `.apk` asset are treated as "no update".
+3. If newer, a dialog shows the release notes with **Installieren**, **Später** and **Überspringen** (that tag is not offered again automatically; a manual check still shows it).
+4. **Installieren** downloads the APK into the app cache (`cacheDir/updates/`, with progress) and hands it to the system package installer via `FileProvider`. Android 8+ asks once to allow installs from this app (`REQUEST_INSTALL_PACKAGES`); the install continues when the user returns.
+5. After the update `MY_PACKAGE_REPLACED` clears the cached APK and re-arms auto-connect.
+
+The installer only accepts an APK signed with the same key as the installed app — updates therefore work for release builds from GitHub, not for locally built debug APKs. A version bump in `release.version` is enough to publish an update every installed app will pick up.
+
+---
+
 ### 7. Foreground Service & Energy Efficiency
 
 #### Why a Foreground Service?
@@ -324,12 +339,13 @@ SonyGpsApp/
 │   │   ├── SonyGpsPacket.kt          GPS packet assembly (91/95 bytes, Sony format)
 │   │   ├── AutoConnect.kt            Background scan for the remembered camera + receivers
 │   │   ├── CameraPrefs.kt            Persistent settings (remembered camera, switches)
-│   │   └── TrackRecorder.kt          GPX track recording
+│   │   ├── TrackRecorder.kt          GPX track recording
+│   │   └── UpdateChecker.kt          In-app update from GitHub releases
 │   ├── res/
 │   │   ├── layout/activity_main.xml
 │   │   ├── drawable/ic_launcher_*.xml
 │   │   ├── mipmap-anydpi-v26/
-│   │   ├── xml/file_paths.xml        FileProvider paths for GPX sharing
+│   │   ├── xml/file_paths.xml        FileProvider paths for GPX sharing and update APKs
 │   │   └── values/themes.xml, colors.xml
 │   └── AndroidManifest.xml
 ├── gradle/
@@ -377,6 +393,8 @@ SonyGpsApp/
 | `ACCESS_BACKGROUND_LOCATION` | GPS in a session started by auto-connect (optional) | API 29 |
 | `RECEIVE_BOOT_COMPLETED` | Re-arm the auto-connect scan after a reboot | API 1 |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Let auto-connect start the service from the background | API 23 |
+| `INTERNET` | Query GitHub releases and download the update APK | API 1 |
+| `REQUEST_INSTALL_PACKAGES` | Hand the downloaded APK to the package installer | API 26 |
 
 ---
 

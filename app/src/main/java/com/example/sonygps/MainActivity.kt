@@ -10,11 +10,22 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.*
 import android.provider.Settings
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import com.example.sonygps.databinding.ActivityMainBinding
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -48,6 +59,12 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
 
     private val foundCameras = mutableListOf<ScanResult>()
     private val mainHandler  = Handler(Looper.getMainLooper())
+
+    /** Scope for update check / download; cancelled in onDestroy. */
+    private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var updateJob: Job? = null
+    /** APK waiting to be installed once the user has allowed installs from this app. */
+    private var pendingApk: File? = null
 
     private companion object {
         const val REQ_PERMISSIONS         = 1
@@ -100,6 +117,8 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         binding.btnConnectLast.setOnClickListener { connectToRememberedCamera() }
         binding.btnForget.setOnClickListener { forgetCamera() }
         binding.btnTracks.setOnClickListener { showTracks() }
+        binding.btnCheckUpdate.setOnClickListener { checkForUpdates(manual = true) }
+        binding.tvVersion.text = "Version ${UpdateChecker.installedVersion(this) ?: "?"}"
 
         // Set initial state before attaching listeners, so they only react to the user
         binding.swAutoConnect.isChecked = prefs.autoConnect
@@ -122,6 +141,22 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         // Re-arm in case Bluetooth was toggled or a permission granted meanwhile
         AutoConnect.arm(this)
         updateUi()
+        checkForUpdates(manual = false)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Back from the "install unknown apps" setting → continue the install
+        val apk = pendingApk
+        if (apk != null && UpdateChecker.canInstall(this)) {
+            pendingApk = null
+            launchInstaller(apk)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        uiScope.cancel()
     }
 
     override fun onStop() {
@@ -310,6 +345,140 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         send.type = "application/gpx+xml"
         send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         startActivity(Intent.createChooser(send, "GPX-Track teilen"))
+    }
+
+    // ── In-app update ─────────────────────────────────────────────────────────
+
+    /**
+     * Asks GitHub for the latest release.
+     * Automatic checks run at most once a day, stay silent when up to date or
+     * offline, and skip a release the user dismissed. Manual checks always report.
+     */
+    private fun checkForUpdates(manual: Boolean) {
+        if (updateJob?.isActive == true) return
+        val now = System.currentTimeMillis()
+        if (!manual && now - prefs.lastUpdateCheck < UpdateChecker.CHECK_INTERVAL_MS) return
+
+        val installed = UpdateChecker.installedVersion(this)
+        if (manual) log("Suche nach Updates…")
+        updateJob = uiScope.launch {
+            try {
+                val release = UpdateChecker.fetchLatest()
+                prefs.lastUpdateCheck = System.currentTimeMillis()
+                if (release == null || installed == null || release.version <= installed) {
+                    if (manual) toast("Sony GPS Link ist aktuell (${installed ?: "?"})")
+                    return@launch
+                }
+                if (!manual && release.tag == prefs.skippedUpdateTag) return@launch
+                log("Update verfügbar: ${release.tag}")
+                showUpdateDialog(release, installed)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (manual) {
+                    log("Update-Prüfung fehlgeschlagen: ${e.message}")
+                    toast("Update-Prüfung fehlgeschlagen")
+                }
+            }
+        }
+    }
+
+    private fun showUpdateDialog(release: UpdateChecker.Release, installed: UpdateChecker.Version) {
+        val sb = StringBuilder("Version ${release.version} ist verfügbar, installiert ist $installed.")
+        if (release.notes.isNotEmpty()) sb.append("\n\n").append(release.notes.take(1500))
+        if (UpdateChecker.isDebugBuild(this)) {
+            sb.append("\n\n⚠ Dies ist ein Debug-Build. Die Release-APK hat eine andere Signatur " +
+                      "und lässt sich nicht darüber installieren.")
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Update verfügbar")
+            .setMessage(sb)
+            .setPositiveButton("Installieren") { _, _ -> downloadAndInstall(release) }
+            .setNegativeButton("Später", null)
+            .setNeutralButton("Überspringen") { _, _ ->
+                prefs.skippedUpdateTag = release.tag
+                log("Update ${release.tag} übersprungen")
+            }
+            .show()
+    }
+
+    private fun downloadAndInstall(release: UpdateChecker.Release) {
+        val progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            isIndeterminate = true
+        }
+        val label = TextView(this).apply { text = release.apkName }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            addView(label, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Update wird geladen…")
+            .setView(content)
+            .setCancelable(false)
+            .setNegativeButton("Abbrechen") { _, _ -> updateJob?.cancel() }
+            .show()
+
+        log("Lade ${release.apkName}…")
+        updateJob = uiScope.launch {
+            try {
+                val apk = UpdateChecker.download(this@MainActivity, release) { pct ->
+                    // Called on the IO thread; View.post is thread-safe
+                    progress.post {
+                        if (pct < 0) progress.isIndeterminate = true
+                        else { progress.isIndeterminate = false; progress.progress = pct }
+                    }
+                }
+                dialog.dismiss()
+                log("Download fertig — Installer wird geöffnet")
+                startInstall(apk)
+            } catch (e: CancellationException) {
+                dialog.dismiss()
+                log("Download abgebrochen")
+            } catch (e: Exception) {
+                dialog.dismiss()
+                log("Download fehlgeschlagen: ${e.message}")
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Download fehlgeschlagen")
+                    .setMessage(e.message ?: e.toString())
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }
+    }
+
+    /** Android 8+ only lets the installer run once the user has allowed this app as a source. */
+    private fun startInstall(apk: File) {
+        if (UpdateChecker.canInstall(this)) { launchInstaller(apk); return }
+        pendingApk = apk
+        AlertDialog.Builder(this)
+            .setTitle("Installation erlauben")
+            .setMessage(
+                "Android verlangt einmalig die Erlaubnis, dass Sony GPS Link Updates installieren darf. " +
+                "Nach dem Zurückkehren wird die Installation fortgesetzt."
+            )
+            .setPositiveButton("Einstellungen") { _, _ ->
+                try {
+                    startActivity(UpdateChecker.unknownSourcesSettingsIntent(this))
+                } catch (e: ActivityNotFoundException) {
+                    pendingApk = null
+                    launchInstaller(apk)  // the installer shows its own prompt then
+                }
+            }
+            .setNegativeButton("Abbrechen") { _, _ -> pendingApk = null }
+            .show()
+    }
+
+    private fun launchInstaller(apk: File) {
+        try {
+            startActivity(UpdateChecker.installIntent(this, apk))
+        } catch (e: ActivityNotFoundException) {
+            log("Kein Paket-Installer gefunden")
+            toast("Kein Paket-Installer gefunden")
+        }
     }
 
     // ── GpsForegroundService.StatusListener ──────────────────────────────────
