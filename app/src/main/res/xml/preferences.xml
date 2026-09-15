@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keys must match CameraPrefs.KEY_*; SettingsActivity points the PreferenceManager
+     at the same SharedPreferences file (CameraPrefs.FILE). -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="Verbindung">
+
+        <SwitchPreferenceCompat
+            android:key="auto_connect"
+            android:title="Automatisch verbinden"
+            android:summary="Sitzung starten, sobald die gespeicherte Kamera in der Nähe ist"
+            android:defaultValue="false"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="battery_exemption"
+            android:title="Akku-Optimierung"
+            android:summary="Damit die App die Sitzung aus dem Hintergrund starten darf"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="GPS">
+
+        <SwitchPreferenceCompat
+            android:key="battery_saver"
+            android:title="Akku sparen"
+            android:summary="Position seltener und mit ausgeglichener Priorität abfragen. Die Kamera erhält weiterhin alle 5 s ein Paket."
+            android:defaultValue="false"
+            app:singleLineTitle="false" />
+
+        <ListPreference
+            android:key="saver_interval_sec"
+            android:title="Positionsabfrage im Akku-Modus"
+            android:entries="@array/saver_interval_labels"
+            android:entryValues="@array/saver_interval_values"
+            android:defaultValue="20"
+            android:dependency="battery_saver"
+            app:useSimpleSummaryProvider="true"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Aufzeichnung">
+
+        <SwitchPreferenceCompat
+            android:key="record_track"
+            android:title="GPS-Track aufzeichnen (GPX)"
+            android:summary="Jede Position einer Sitzung wird in eine GPX-Datei geschrieben — für nachträgliches Geotagging"
+            android:defaultValue="false"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="share_tracks"
+            android:title="Tracks teilen"
+            android:summary="Aufgezeichnete GPX-Dateien an andere Apps weitergeben"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Info">
+
+        <Preference
+            android:key="version"
+            android:title="Version"
+            android:selectable="false" />
+
+        <Preference
+            android:key="github"
+            android:title="Projekt auf GitHub"
+            android:summary="github.com/Asdoos/SonyGpsApp">
+            <intent
+                android:action="android.intent.action.VIEW"
+                android:data="https://github.com/Asdoos/SonyGpsApp" />
+        </Preference>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -31,8 +31,12 @@ import com.google.android.gms.location.*
  *  - Optional GPX recording (TrackRecorder); while recording, GPS keeps running
  *    during reconnect attempts so the track has no gaps
  *
- * GPS interval: 5 s (camera doesn't need sub-second accuracy, saves ~15% vs 2 s),
- * or 20 s with balanced priority in battery-saver mode (CameraPrefs.batterySaver).
+ * GPS: fixes are requested every 5 s (HIGH_ACCURACY) or, in battery-saver mode,
+ * every 10–60 s with balanced priority. Independently of that, the latest fix is
+ * sent to the camera every 5 s (SEND_INTERVAL) with a fresh timestamp — the camera
+ * flags its position as invalid when packets stop for more than a few seconds,
+ * while the expensive part is the GPS chip, not the BLE write. Without a fix for
+ * MAX_FIX_AGE the sending stops so the camera honestly shows "no GPS".
  */
 class GpsForegroundService : Service(), SonyCameraGatt.Listener {
 
@@ -75,6 +79,21 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     private val handler          = Handler(Looper.getMainLooper())
     private val reconnectRunnable = Runnable { attemptReconnect() }
 
+    /** Latest usable fix; sent to the camera by [sendRunnable] until it is older than MAX_FIX_AGE. */
+    private var lastFix: Location? = null
+    private var staleLogged = false
+    private val sendRunnable = object : Runnable {
+        override fun run() {
+            sendLatestFix()
+            handler.postDelayed(this, SEND_INTERVAL)
+        }
+    }
+
+    /** Settings changed in SettingsActivity apply to the running session. */
+    private val prefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == CameraPrefs.KEY_BATTERY_SAVER || key == CameraPrefs.KEY_SAVER_INTERVAL) applyGpsMode()
+    }
+
     companion object {
         const val CHANNEL_ID     = "sony_gps_channel"
         const val NOTIF_ID       = 1
@@ -83,8 +102,9 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         private const val EXTRA_ADDRESS = "address"
 
         private const val MAX_RECONNECT     = 10
-        private const val NORMAL_INTERVAL   = 5_000L   // ms
-        private const val SAVER_INTERVAL    = 20_000L  // ms
+        private const val NORMAL_INTERVAL   = 5_000L   // ms, fix request in normal mode
+        private const val SEND_INTERVAL     = 5_000L   // ms, packet cadence towards the camera
+        private const val MAX_FIX_AGE       = 60_000L  // ms, stop sending when the fix is older
         private const val RECONNECT_DELAY   = 4_000L   // ms
 
         /** True from connect until the session ends (stop, reconnects exhausted). */
@@ -120,34 +140,69 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     // ── GPS request ───────────────────────────────────────────────────────────
     // Normal: HIGH_ACCURACY every 5 s. The camera only needs a new fix when the
     // position actually changes; 5 s vs 2 s saves ~15 % GPS wakeup overhead.
-    // Battery saver: BALANCED_POWER_ACCURACY every 20 s. Fused location may then
-    // serve fixes from WiFi/cell and keep the GPS chip off between requests — for
-    // geotagging photos a position that is a few seconds old is irrelevant.
+    // Battery saver: BALANCED_POWER_ACCURACY every saverIntervalMs. Fused location
+    // may then serve fixes from WiFi/cell and keep the GPS chip off in between —
+    // for geotagging photos a position that is a few seconds old is irrelevant.
     private val normalRequest = LocationRequest.Builder(
         Priority.PRIORITY_HIGH_ACCURACY, NORMAL_INTERVAL
     ).setMinUpdateIntervalMillis(3_000L).build()
 
-    private val saverRequest = LocationRequest.Builder(
-        Priority.PRIORITY_BALANCED_POWER_ACCURACY, SAVER_INTERVAL
-    ).setMinUpdateIntervalMillis(10_000L).build()
+    private fun saverRequest(intervalMs: Long) = LocationRequest.Builder(
+        Priority.PRIORITY_BALANCED_POWER_ACCURACY, intervalMs
+    ).setMinUpdateIntervalMillis(intervalMs / 2).build()
 
-    /** Mode the running location request was started with; null while GPS is off. */
-    private var gpsSaverActive: Boolean? = null
+    /** Fix interval (ms) the running location request was started with; null while GPS is off. */
+    private var gpsIntervalActive: Long? = null
+
+    /** Interval the current settings ask for. */
+    private val wantedInterval: Long
+        get() = if (prefs.batterySaver) prefs.saverIntervalMs else NORMAL_INTERVAL
 
     @SuppressLint("MissingPermission")
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val loc = result.lastLocation ?: return
             val speedKmh = (loc.speed * 3.6f).toInt()
-            if (isReady) {
-                cameraGatt?.sendLocation(loc)
-                updateNotification(
-                    "GPS aktiv — %.5f, %.5f  %d km/h".format(loc.latitude, loc.longitude, speedKmh)
-                )
+            val first = lastFix == null
+            lastFix = loc
+            staleLogged = false
+            // First fix of the session: don't wait for the next tick, the camera is waiting
+            if (first && isReady) {
+                handler.removeCallbacks(sendRunnable)
+                handler.post(sendRunnable)
             }
             recordTrackPoint(loc)
             statusListener?.onServiceGpsUpdate(loc.latitude, loc.longitude, loc.accuracy, speedKmh)
         }
+    }
+
+    /**
+     * Sends the latest fix to the camera, re-stamped with the current time. Called
+     * every SEND_INTERVAL regardless of how often fixes arrive. Re-stamping matters:
+     * the camera uses the packet time for its clock correction, so repeating an old
+     * timestamp would set the camera clock back by up to one fix interval.
+     */
+    private fun sendLatestFix() {
+        if (!isReady) return
+        val fix = lastFix ?: return
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - fix.elapsedRealtimeNanos) / 1_000_000L
+        if (ageMs > MAX_FIX_AGE) {
+            if (!staleLogged) {
+                staleLogged = true
+                log("Kein aktueller Fix seit ${ageMs / 1000} s — sende nichts mehr")
+                updateNotification("Warte auf GPS…")
+            }
+            return
+        }
+        val now = Location(fix).apply {
+            time = System.currentTimeMillis()
+            elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
+        }
+        cameraGatt?.sendLocation(now)
+        val speedKmh = (fix.speed * 3.6f).toInt()
+        updateNotification(
+            "GPS aktiv — %.5f, %.5f  %d km/h".format(fix.latitude, fix.longitude, speedKmh)
+        )
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -156,6 +211,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         super.onCreate()
         fusedLocation = LocationServices.getFusedLocationProviderClient(this)
         prefs = CameraPrefs(this)
+        prefs.registerOnChange(prefsListener)
         createNotificationChannel(this)
         // Start foreground immediately so Android doesn't kill us before a camera is connected
         startForeground(NOTIF_ID, buildNotification("Bereit…"))
@@ -172,6 +228,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
 
     override fun onDestroy() {
         super.onDestroy()
+        prefs.unregisterOnChange(prefsListener)
         handler.removeCallbacks(reconnectRunnable)
         stopGps()
         closeTrack()
@@ -232,6 +289,9 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         updateNotification("GPS aktiv")
         log("Bereit — starte GPS + APO-Keepalive (9 s)")
         startGps()
+        // Packet ticker: sends the latest fix every SEND_INTERVAL (also across reconnects)
+        handler.removeCallbacks(sendRunnable)
+        handler.post(sendRunnable)
         statusListener?.onServiceReady()
     }
 
@@ -240,6 +300,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         isReady     = false
         readyForGps = false
         SessionTileService.requestUpdate(this)
+        handler.removeCallbacks(sendRunnable)
         cameraGatt?.close()
         cameraGatt = null
         statusListener?.onServiceDisconnected()
@@ -314,29 +375,36 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     private fun startGps() {
         if (gpsRunning) return
         gpsRunning = true
-        val saver = prefs.batterySaver
-        gpsSaverActive = saver
+        val saver    = prefs.batterySaver
+        val interval = wantedInterval
+        gpsIntervalActive = interval
         fusedLocation.requestLocationUpdates(
-            if (saver) saverRequest else normalRequest, locationCallback, Looper.getMainLooper()
+            if (saver) saverRequest(interval) else normalRequest, locationCallback, Looper.getMainLooper()
         )
-        log(if (saver) "GPS: Akku-Modus (alle ${SAVER_INTERVAL / 1000} s, ausgeglichen)"
-            else "GPS: Normal (alle ${NORMAL_INTERVAL / 1000} s, hohe Genauigkeit)")
+        log(if (saver) "GPS: Akku-Modus (Fix alle ${interval / 1000} s, ausgeglichen; Paket alle ${SEND_INTERVAL / 1000} s)"
+            else "GPS: Normal (alle ${interval / 1000} s, hohe Genauigkeit)")
     }
 
     private fun stopGps() {
         gpsRunning = false
-        gpsSaverActive = null
+        gpsIntervalActive = null
+        lastFix = null
+        handler.removeCallbacks(sendRunnable)
         fusedLocation.removeLocationUpdates(locationCallback)
     }
 
     /**
-     * Re-reads [CameraPrefs.batterySaver] and restarts the location request if the
-     * mode changed, so toggling the switch applies to the running session.
+     * Re-reads the battery-saver settings and restarts the location request if the
+     * interval changed, so a change in SettingsActivity applies to the running session.
+     * The packet ticker keeps running; lastFix is kept so the camera sees no gap.
      */
-    fun applyGpsMode() {
-        if (!gpsRunning || gpsSaverActive == prefs.batterySaver) return
+    private fun applyGpsMode() {
+        if (!gpsRunning || gpsIntervalActive == wantedInterval) return
+        val keep = lastFix
         stopGps()
         startGps()
+        lastFix = keep
+        if (isReady) handler.post(sendRunnable)
     }
 
     // ── GPX track ─────────────────────────────────────────────────────────────

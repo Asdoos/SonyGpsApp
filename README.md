@@ -20,7 +20,8 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 |---|---|
 | BLE camera discovery | Scan for Sony devices (manufacturer ID 301) |
 | GPS transfer | WGS-84, every 5 seconds, 91 or 95-byte packet |
-| Battery saver | GPS every 20 seconds with balanced priority instead of high accuracy |
+| Battery saver | Fixes every 10–60 s with balanced priority; the camera still gets a packet every 5 s |
+| Settings screen | Auto-connect, battery saver, GPX recording, track sharing, battery-optimization shortcut |
 | APO keepalive | Prevents camera sleep mode, every 9 seconds |
 | Auto-reconnect | Up to 10 attempts after unexpected disconnection |
 | Foreground Service | GPS + BLE run persistently, even with the app closed |
@@ -267,6 +268,21 @@ The tile is declared as an *active tile*, so the service pushes state changes (`
 
 ---
 
+### 6e. Settings Screen
+
+`SettingsActivity` (AndroidX Preference, gear icon in the action bar) holds everything that is not part of the live session:
+
+| Section | Setting |
+|---|---|
+| Verbindung | Auto-connect (with the background-location dialog), battery-optimization shortcut showing the current state |
+| GPS | Battery saver, fix interval in battery-saver mode (10/20/30/60 s) |
+| Aufzeichnung | GPX recording, "Tracks teilen" |
+| Info | Version, link to GitHub |
+
+The preferences write to the same `SharedPreferences` file as `CameraPrefs` (`sony_gps`, identical keys), so the service and `AutoConnect` read them unchanged. The service registers an `OnSharedPreferenceChangeListener` and restarts the location request when the battery-saver settings change mid-session. The main screen shows a one-line summary of the active modes.
+
+---
+
 ### 7. Foreground Service & Energy Efficiency
 
 #### Why a Foreground Service?
@@ -300,7 +316,9 @@ android:foregroundServiceType="location|connectedDevice"
 
 #### Battery saver ("Akku sparen")
 
-With the switch enabled the location request changes from `PRIORITY_HIGH_ACCURACY` every 5 s to `PRIORITY_BALANCED_POWER_ACCURACY` every 20 s (minimum 10 s). Fused location may then serve fixes from WiFi/cell positioning and keep the GPS chip off between requests, which roughly halves the app's share of the drain. Photos get a position that is at most ~20 s old and typically within ~100 m — sufficient for geotagging. The setting applies immediately, also in a running session; GPX recording uses the same fixes, so tracks become coarser in this mode.
+With the switch enabled the location request changes from `PRIORITY_HIGH_ACCURACY` every 5 s to `PRIORITY_BALANCED_POWER_ACCURACY` every 10/20/30/60 s (configurable in Settings, default 20 s). Fused location may then serve fixes from WiFi/cell positioning and keep the GPS chip off between requests, which roughly halves the app's share of the drain. Photos get a position that is at most one fix interval old and typically within ~100 m — sufficient for geotagging. The setting applies immediately, also in a running session; GPX recording uses the same fixes, so tracks become coarser in this mode.
+
+**Packet cadence is decoupled from fix cadence.** The camera flags its position as invalid when GPS packets stop for more than a few seconds, so the service sends the *latest* fix to the camera every 5 s (`SEND_INTERVAL`) regardless of how often fixes arrive — a BLE write costs next to nothing compared to the GPS chip. Each resend is re-stamped with the current time, because the camera uses the packet time for its clock correction. When no fix has arrived for 60 s (`MAX_FIX_AGE`) the sending stops, so the camera honestly shows "no GPS" instead of a stale position.
 
 ---
 
@@ -355,6 +373,7 @@ SonyGpsApp/
 │   ├── java/com/example/sonygps/
 │   │   ├── GpsForegroundService.kt   Foreground service: GPS + BLE session management
 │   │   ├── MainActivity.kt           UI: BLE scan, camera selection, service binding
+│   │   ├── SettingsActivity.kt       Settings screen (AndroidX Preference)
 │   │   ├── SonyCameraGatt.kt         BLE GATT client: handshake, op-queue, APO keepalive
 │   │   ├── SonyGpsPacket.kt          GPS packet assembly (91/95 bytes, Sony format)
 │   │   ├── AutoConnect.kt            Background scan for the remembered camera + receivers
@@ -367,6 +386,8 @@ SonyGpsApp/
 │   │   ├── drawable/ic_launcher_*.xml
 │   │   ├── mipmap-anydpi-v26/
 │   │   ├── xml/file_paths.xml        FileProvider paths for GPX sharing and update APKs
+│   │   ├── xml/preferences.xml       Settings screen definition
+│   │   ├── menu/main_menu.xml        Action bar: settings entry
 │   │   └── values/themes.xml, colors.xml
 │   └── AndroidManifest.xml
 ├── gradle/

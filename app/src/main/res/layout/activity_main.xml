@@ -81,7 +81,7 @@
 
     </LinearLayout>
 
-    <!-- Camera card: remembered camera, auto-connect, GPX recording -->
+    <!-- Camera card: remembered camera (settings live in SettingsActivity) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -132,40 +132,14 @@
 
         </LinearLayout>
 
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/swAutoConnect"
+        <TextView
+            android:id="@+id/tvModes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Automatisch verbinden, wenn die Kamera in der Nähe ist"
-            android:textColor="#FFFFFFFF"
-            android:textSize="13sp"
-            android:paddingVertical="4dp"/>
-
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/swRecordTrack"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="GPS-Track aufzeichnen (GPX)"
-            android:textColor="#FFFFFFFF"
-            android:textSize="13sp"
-            android:paddingVertical="4dp"/>
-
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/swBatterySaver"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Akku sparen (GPS alle 20 s statt 5 s, geringere Genauigkeit)"
-            android:textColor="#FFFFFFFF"
-            android:textSize="13sp"
-            android:paddingVertical="4dp"/>
-
-        <Button
-            android:id="@+id/btnTracks"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:textColor="@color/text_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Tracks teilen"/>
+            android:text=""
+            android:textColor="#FF888888"
+            android:textSize="12sp"
+            android:paddingTop="4dp"/>
 
     </LinearLayout>
 

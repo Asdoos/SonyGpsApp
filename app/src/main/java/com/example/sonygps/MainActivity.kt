@@ -7,9 +7,9 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.le.*
 import android.content.*
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.*
-import android.provider.Settings
+import android.view.Menu
+import android.view.MenuItem
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -17,7 +17,6 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.FileProvider
 import com.example.sonygps.databinding.ActivityMainBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -67,8 +66,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
     private var pendingApk: File? = null
 
     private companion object {
-        const val REQ_PERMISSIONS         = 1
-        const val REQ_BACKGROUND_LOCATION = 2
+        const val REQ_PERMISSIONS = 1
     }
 
     // ── Service binding ───────────────────────────────────────────────────────
@@ -116,27 +114,24 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         }
         binding.btnConnectLast.setOnClickListener { connectToRememberedCamera() }
         binding.btnForget.setOnClickListener { forgetCamera() }
-        binding.btnTracks.setOnClickListener { showTracks() }
         binding.btnCheckUpdate.setOnClickListener { checkForUpdates(manual = true) }
         binding.tvVersion.text = "Version ${UpdateChecker.installedVersion(this) ?: "?"}"
 
-        // Set initial state before attaching listeners, so they only react to the user
-        binding.swAutoConnect.isChecked = prefs.autoConnect
-        binding.swRecordTrack.isChecked = prefs.recordTrack
-        binding.swBatterySaver.isChecked = prefs.batterySaver
-        binding.swAutoConnect.setOnCheckedChangeListener { _, checked -> setAutoConnect(checked) }
-        binding.swRecordTrack.setOnCheckedChangeListener { _, checked ->
-            prefs.recordTrack = checked
-            log(if (checked) "GPX-Aufzeichnung an" else "GPX-Aufzeichnung aus")
-        }
-        binding.swBatterySaver.setOnCheckedChangeListener { _, checked ->
-            prefs.batterySaver = checked
-            log(if (checked) "Akku-Modus an" else "Akku-Modus aus")
-            gpsService?.applyGpsMode()   // takes effect in a running session
-        }
-
         requestPermissions()
         updateUi()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_settings) {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onStart() {
@@ -275,82 +270,6 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
             }
             .setNegativeButton("Abbrechen", null)
             .show()
-    }
-
-    private fun setAutoConnect(enabled: Boolean) {
-        prefs.autoConnect = enabled
-        if (!enabled) {
-            AutoConnect.disarm(this)
-            log("Automatisches Verbinden aus")
-            return
-        }
-        log("Automatisches Verbinden an")
-        if (!AutoConnect.hasBackgroundLocation(this)) {
-            AlertDialog.Builder(this)
-                .setTitle("Standort im Hintergrund")
-                .setMessage(
-                    "Damit die App die GPS-Übertragung selbst starten kann, während sie geschlossen ist, " +
-                    "braucht sie Standortzugriff „Immer zulassen“. Ohne diese Berechtigung erscheint " +
-                    "stattdessen eine Benachrichtigung, sobald die Kamera in der Nähe ist."
-                )
-                .setPositiveButton("Weiter") { _, _ ->
-                    ActivityCompat.requestPermissions(
-                        this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), REQ_BACKGROUND_LOCATION
-                    )
-                }
-                .setNegativeButton("Später") { _, _ -> finishAutoConnectSetup() }
-                .show()
-            return
-        }
-        finishAutoConnectSetup()
-    }
-
-    private fun finishAutoConnectSetup() {
-        requestBatteryOptimizationExemption()
-        AutoConnect.arm(this)
-    }
-
-    /**
-     * Android 12+ only lets exempt apps start a foreground service from the background.
-     * Ignoring battery optimizations is such an exemption.
-     */
-    @SuppressLint("BatteryLife")
-    private fun requestBatteryOptimizationExemption() {
-        val pm = getSystemService(PowerManager::class.java)
-        if (pm.isIgnoringBatteryOptimizations(packageName)) return
-        try {
-            startActivity(
-                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
-            )
-        } catch (e: ActivityNotFoundException) {
-            log("Akku-Optimierung bitte manuell für Sony GPS Link deaktivieren")
-        }
-    }
-
-    // ── GPX tracks ────────────────────────────────────────────────────────────
-
-    private fun showTracks() {
-        val tracks = TrackRecorder.listTracks(this)
-        if (tracks.isEmpty()) { toast("Noch keine Tracks aufgezeichnet"); return }
-        val labels = tracks.map { "${it.nameWithoutExtension}  (${(it.length() + 1023) / 1024} KB)" }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("Track teilen")
-            .setItems(labels) { _, idx -> shareTracks(listOf(tracks[idx])) }
-            .setNeutralButton("Alle teilen") { _, _ -> shareTracks(tracks) }
-            .setNegativeButton("Abbrechen", null)
-            .show()
-    }
-
-    private fun shareTracks(files: List<File>) {
-        val uris = ArrayList(files.map { FileProvider.getUriForFile(this, "$packageName.fileprovider", it) })
-        val send = if (uris.size == 1) {
-            Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0])
-        } else {
-            Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
-        }
-        send.type = "application/gpx+xml"
-        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        startActivity(Intent.createChooser(send, "GPX-Track teilen"))
     }
 
     // ── In-app update ─────────────────────────────────────────────────────────
@@ -548,7 +467,14 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         }
         binding.btnConnectLast.isEnabled = address != null && !session
         binding.btnForget.isEnabled      = address != null && !session
-        binding.swAutoConnect.isEnabled  = address != null
+
+        // Compact summary of the settings that shape a session (edited in SettingsActivity)
+        val modes = buildList {
+            if (prefs.autoConnect)  add("Auto-Verbinden")
+            if (prefs.batterySaver) add("Akku sparen (${prefs.saverIntervalMs / 1000} s)")
+            if (prefs.recordTrack)  add("GPX-Aufzeichnung")
+        }
+        binding.tvModes.text = if (modes.isEmpty()) "Standard-Einstellungen" else modes.joinToString(" · ")
     }
 
     private fun log(msg: String) {
@@ -594,11 +520,6 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
                 if (denied.isNotEmpty())
                     log("Verweigerte Berechtigungen: ${denied.joinToString()}")
                 AutoConnect.arm(this)
-            }
-            REQ_BACKGROUND_LOCATION -> {
-                if (denied.isNotEmpty())
-                    log("Kein Standort im Hintergrund — Kamera wird per Benachrichtigung angeboten")
-                finishAutoConnectSetup()
             }
         }
     }
