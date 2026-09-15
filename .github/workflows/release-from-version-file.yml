@@ -1,9 +1,11 @@
 name: Release APK from version file
 
-# Releases can be cut without pushing a tag: bump release.version on any
-# branch and this workflow builds the APK and creates the tag and release.
+# Releases can be cut without pushing a tag: bump release.version on main
+# and this workflow builds the APK and creates the tag and release.
 on:
   push:
+    branches:
+      - main
     paths:
       - 'release.version'
 
