@@ -81,6 +81,85 @@
 
     </LinearLayout>
 
+    <!-- Camera card: remembered camera, auto-connect, GPX recording -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FF1E1E1E"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="KAMERA"
+            android:textColor="#FF888888"
+            android:textSize="10sp"
+            android:letterSpacing="0.15"
+            android:paddingBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tvCamera"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Keine Kamera gespeichert"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnConnectLast"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:textColor="@color/text_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verbinden"
+                android:enabled="false"/>
+
+            <Button
+                android:id="@+id/btnForget"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:textColor="@color/text_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vergessen"
+                android:enabled="false"/>
+
+        </LinearLayout>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swAutoConnect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Automatisch verbinden, wenn die Kamera in der Nähe ist"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:paddingVertical="4dp"/>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swRecordTrack"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="GPS-Track aufzeichnen (GPX)"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:paddingVertical="4dp"/>
+
+        <Button
+            android:id="@+id/btnTracks"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:textColor="@color/text_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tracks teilen"/>
+
+    </LinearLayout>
+
     <!-- Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
