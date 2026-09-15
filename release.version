@@ -1,4 +1,4 @@
 # Tag of the release to build. Changing this file on main builds the
 # signed APK and publishes it as a GitHub release under this tag.
 # Lines starting with # are ignored.
-v0.2.0
+v0.3.0
