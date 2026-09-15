@@ -1,4 +1,4 @@
-package com.example.sonygps
+package com.anri.sonygps
 
 import android.annotation.SuppressLint
 import android.app.*
@@ -123,8 +123,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     companion object {
         const val CHANNEL_ID     = "sony_gps_channel"
         const val NOTIF_ID       = 1
-        const val ACTION_STOP    = "com.example.sonygps.ACTION_STOP"
-        const val ACTION_CONNECT = "com.example.sonygps.ACTION_CONNECT"
+        const val ACTION_STOP    = "com.anri.sonygps.ACTION_STOP"
+        const val ACTION_CONNECT = "com.anri.sonygps.ACTION_CONNECT"
         private const val EXTRA_ADDRESS = "address"
 
         private const val MAX_RECONNECT     = 10

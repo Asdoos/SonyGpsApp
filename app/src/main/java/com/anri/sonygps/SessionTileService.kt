@@ -1,4 +1,4 @@
-package com.example.sonygps
+package com.anri.sonygps
 
 import android.Manifest
 import android.annotation.SuppressLint

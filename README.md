@@ -372,7 +372,7 @@ With the switch enabled the location request changes from `PRIORITY_HIGH_ACCURAC
 ```
 SonyGpsApp/
 ├── app/src/main/
-│   ├── java/com/example/sonygps/
+│   ├── java/com/anri/sonygps/
 │   │   ├── GpsForegroundService.kt   Foreground service: GPS + BLE session management
 │   │   ├── MainActivity.kt           UI: BLE scan, camera selection, service binding
 │   │   ├── SettingsActivity.kt       Settings screen (AndroidX Preference)

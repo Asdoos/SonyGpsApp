@@ -1,4 +1,4 @@
-package com.example.sonygps
+package com.anri.sonygps
 
 import android.app.Application
 import com.google.android.material.color.DynamicColors

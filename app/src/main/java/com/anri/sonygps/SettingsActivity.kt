@@ -1,4 +1,4 @@
-package com.example.sonygps
+package com.anri.sonygps
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -14,6 +14,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -40,6 +43,14 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         title = getString(R.string.menu_settings)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        // Edge-to-edge on Android 15+: keep the preference list clear of the navigation bar.
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.updatePadding(left = bars.left, right = bars.right, bottom = bars.bottom)
+            insets
+        }
         updates = UpdateFlow(this) { DiagnosticLog.log(this, "App", it) }
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()

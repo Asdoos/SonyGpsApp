@@ -12,6 +12,17 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+### Geändert
+- **Neuer Paketname:** Die App heißt technisch jetzt `com.anri.sonygps`
+  statt `com.example.sonygps`. **Wer eine ältere Version installiert hat, muss
+  diese einmalig von Hand deinstallieren** — das In-App-Update kann eine App
+  mit anderem Paketnamen nicht ersetzen. Gespeicherte Kamera, Einstellungen und
+  GPX-Tracks der alten Version gehen dabei verloren; Tracks vorher teilen.
+- Die App zielt auf Android 16 (API 36). Ab Android 15 wird der Bildschirm
+  randlos gezeichnet; Inhalte bleiben frei von Navigationsleiste und
+  Display-Aussparung.
+- Die MIT-Lizenz liegt jetzt als Datei `LICENSE` im Repository.
+
 ## [0.8.0] - 2026-09-15
 
 ### Geändert

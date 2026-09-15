@@ -1,4 +1,4 @@
-package com.example.sonygps
+package com.anri.sonygps
 
 import android.location.Location
 import java.nio.ByteBuffer

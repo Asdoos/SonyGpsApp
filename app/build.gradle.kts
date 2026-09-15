@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.sonygps"
-    compileSdk = 34
+    namespace = "com.anri.sonygps"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.sonygps"
+        applicationId = "com.anri.sonygps"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 9
         versionName = "0.8.0"
     }

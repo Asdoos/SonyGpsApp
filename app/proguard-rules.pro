@@ -4,7 +4,7 @@
 -keep class * extends android.bluetooth.BluetoothGattCallback { *; }
 
 # Keep app classes
--keep class com.example.sonygps.** { *; }
+-keep class com.anri.sonygps.** { *; }
 
 # Google Play Services Location
 -keep class com.google.android.gms.location.** { *; }

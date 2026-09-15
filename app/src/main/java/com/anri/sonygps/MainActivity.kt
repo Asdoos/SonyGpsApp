@@ -1,4 +1,4 @@
-package com.example.sonygps
+package com.anri.sonygps
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -19,7 +19,10 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.sonygps.databinding.ActivityMainBinding
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import com.anri.sonygps.databinding.ActivityMainBinding
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.text.SimpleDateFormat
@@ -109,6 +112,15 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // Android 15+ draws edge-to-edge: keep the content clear of the navigation bar
+        // and display cutouts. The action bar already handles the status bar.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.updatePadding(left = bars.left, right = bars.right, bottom = bars.bottom)
+            insets
+        }
 
         bluetoothAdapter = (getSystemService(BluetoothManager::class.java))?.adapter
         prefs   = CameraPrefs(this)

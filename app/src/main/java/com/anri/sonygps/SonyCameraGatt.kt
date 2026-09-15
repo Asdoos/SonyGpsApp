@@ -1,4 +1,4 @@
-package com.example.sonygps
+package com.anri.sonygps
 
 import android.annotation.SuppressLint
 import android.bluetooth.*
