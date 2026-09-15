@@ -23,6 +23,9 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 | APO keepalive | Prevents camera sleep mode, every 9 seconds |
 | Auto-reconnect | Up to 10 attempts after unexpected disconnection |
 | Foreground Service | GPS + BLE run persistently, even with the app closed |
+| Remembered camera | Stored after the first successful handshake — reconnect without scanning |
+| Auto-connect | Background BLE scan starts the session when the remembered camera is in range |
+| GPX track recording | Every fix of a session is written to a GPX file for geotagging photos later |
 
 ---
 
@@ -186,6 +189,50 @@ Upon unexpected connection loss (camera sleep despite keepalive, out of range, e
 - **Maximum attempts:** 10
 - **Counter reset:** on successfully completed handshake (`onReady`)
 - **No reconnect** if the user manually tapped "Stop" (`userStopped` flag)
+- **While recording a GPX track:** GPS keeps running during reconnect attempts, so the track has no gaps
+
+---
+
+### 6a. Remembered Camera & Auto-Connect
+
+After the first successful handshake (`onReady`), the camera's MAC address and name are stored in `SharedPreferences` (`CameraPrefs`). The app then offers **Verbinden** — direct connect, no scan and no chooser dialog.
+
+With **"Automatisch verbinden"** enabled, `AutoConnect` registers a background BLE scan whose results are delivered via `PendingIntent`:
+
+```
+BluetoothLeScanner.startScan(filters, settings, PendingIntent → CameraNearbyReceiver)
+ScanFilter: DeviceAddress(<remembered MAC>) + ManufacturerData(companyId = 301)
+ScanMode:   SCAN_MODE_LOW_POWER
+```
+
+The scan runs inside the Bluetooth stack, so it costs no app wakeups until the camera advertises and it survives the app process being killed.
+
+| Event | Background scan |
+|---|---|
+| Session starts (manual or automatic) | disarmed |
+| Session ends (stop, reconnects exhausted) | armed |
+| App opened, boot completed, app updated | armed |
+| Camera forgotten / auto-connect switched off | disarmed |
+
+When the camera is seen, `CameraNearbyReceiver` starts the foreground service. Guards:
+
+- **Manual stop:** auto-connect pauses for 30 minutes — otherwise the still-advertising camera would reconnect right away
+- **Rate limit:** at most one attempt per 60 seconds
+- **Android 12+ background start restriction:** starting a foreground service from the background needs an exemption, so the app offers to be excluded from battery optimization. If the start is refused anyway — or background location was not granted — a **"Kamera in der Nähe — tippen zum Verbinden"** notification is posted instead, since a notification tap may always start a foreground service
+
+---
+
+### 6b. GPX Track Recording
+
+With **"GPS-Track aufzeichnen"** enabled, every fix of a session is written to a GPX 1.1 file (`TrackRecorder`):
+
+- One file per session: `track_YYYY-MM-DD_HH-MM-SS.gpx` in the app's private storage
+- Per point: latitude/longitude (7 decimals), elevation if available, UTC time
+- Fixes with accuracy worse than 100 m are skipped
+- The closing tags are rewritten after every point, so the file is valid GPX at any time — even if the process is killed mid-session
+- **"Tracks teilen"** shares them through the Android share sheet (`FileProvider`) — e.g. to Lightroom, darktable, GeoSetter or `exiftool -geotag track.gpx`
+
+Photos taken while the BLE link was down carry no coordinates; the track closes that gap afterwards. The setting takes effect immediately, including in a running session.
 
 ---
 
@@ -274,11 +321,15 @@ SonyGpsApp/
 │   │   ├── GpsForegroundService.kt   Foreground service: GPS + BLE session management
 │   │   ├── MainActivity.kt           UI: BLE scan, camera selection, service binding
 │   │   ├── SonyCameraGatt.kt         BLE GATT client: handshake, op-queue, APO keepalive
-│   │   └── SonyGpsPacket.kt          GPS packet assembly (91/95 bytes, Sony format)
+│   │   ├── SonyGpsPacket.kt          GPS packet assembly (91/95 bytes, Sony format)
+│   │   ├── AutoConnect.kt            Background scan for the remembered camera + receivers
+│   │   ├── CameraPrefs.kt            Persistent settings (remembered camera, switches)
+│   │   └── TrackRecorder.kt          GPX track recording
 │   ├── res/
 │   │   ├── layout/activity_main.xml
 │   │   ├── drawable/ic_launcher_*.xml
 │   │   ├── mipmap-anydpi-v26/
+│   │   ├── xml/file_paths.xml        FileProvider paths for GPX sharing
 │   │   └── values/themes.xml, colors.xml
 │   └── AndroidManifest.xml
 ├── gradle/
@@ -323,6 +374,9 @@ SonyGpsApp/
 | `FOREGROUND_SERVICE_LOCATION` | GPS access in foreground service | API 34 |
 | `FOREGROUND_SERVICE_CONNECTED_DEVICE` | BLE access in foreground service | API 34 |
 | `POST_NOTIFICATIONS` | Display service notification | API 33 |
+| `ACCESS_BACKGROUND_LOCATION` | GPS in a session started by auto-connect (optional) | API 29 |
+| `RECEIVE_BOOT_COMPLETED` | Re-arm the auto-connect scan after a reboot | API 1 |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Let auto-connect start the service from the background | API 23 |
 
 ---
 
@@ -331,6 +385,7 @@ SonyGpsApp/
 - **Pairing required:** The camera must be paired via the Android system Bluetooth settings (not through this app). The pairing protocol from the Sony app is not implemented.
 - **BLE GPS protocol only:** WiFi (PTP/IP, port 15740) and USB (PTP/MTP) are not supported — BLE only.
 - **No live viewfinder:** The app transfers GPS data only. Camera control and image transfer are not implemented.
+- **Auto-connect depends on the camera advertising:** Bluetooth and location linking must be enabled on the camera. Aggressive vendor battery savers (Xiaomi, Huawei, Samsung "deep sleep") can stop background scans — exclude the app there too.
 - **GPS accuracy:** `PRIORITY_HIGH_ACCURACY` uses the hardware GPS chip. Indoors or in poor reception conditions, fixes older than 10 seconds are automatically discarded.
 
 ---

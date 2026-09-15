@@ -34,6 +34,17 @@
     <!-- ── Notifications (Android 13+) ─────────────────────────────────── -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- ── Auto-connect ─────────────────────────────────────────────────── -->
+    <!--
+        A location foreground service started from the background (auto-connect)
+        only receives fixes with "Allow all the time" location access.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Background BLE scans are lost on reboot → re-armed by BootReceiver -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Exemption needed to start the foreground service from the background (Android 12+) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
@@ -64,6 +75,31 @@
             android:name=".GpsForegroundService"
             android:foregroundServiceType="location|connectedDevice"
             android:exported="false" />
+
+        <!-- Background scan results for the remembered camera (AutoConnect) -->
+        <receiver
+            android:name=".CameraNearbyReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Shares recorded GPX tracks with other apps -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
