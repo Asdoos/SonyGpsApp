@@ -12,6 +12,8 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-15
+
 ### Geändert
 - **Suche endet nach 30 Sekunden:** Findet der Scan keine Kamera, zeigt die
   Statuskarte „Keine Kamera gefunden“ mit den Punkten, die zu prüfen sind
@@ -131,7 +133,8 @@ Regeln für Einträge:
 - Erste Version: BLE-Suche nach Sony-Kameras, GPS-Übertragung alle 5 s,
   APO-Keepalive, automatischer Reconnect, Foreground-Service.
 
-[Unreleased]: https://github.com/Asdoos/SonyGpsApp/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Asdoos/SonyGpsApp/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.6.0...v0.7.0
