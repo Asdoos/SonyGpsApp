@@ -4,35 +4,48 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory android:title="Verbindung">
+    <PreferenceCategory android:title="@string/pref_cat_language">
+
+        <ListPreference
+            android:key="app_language"
+            android:title="@string/pref_language_title"
+            android:entries="@array/language_labels"
+            android:entryValues="@array/language_values"
+            android:defaultValue=""
+            app:useSimpleSummaryProvider="true"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/pref_cat_connection">
 
         <SwitchPreferenceCompat
             android:key="auto_connect"
-            android:title="Automatisch verbinden"
-            android:summary="Sitzung starten, sobald die gespeicherte Kamera in der Nähe ist"
+            android:title="@string/pref_auto_connect_title"
+            android:summary="@string/pref_auto_connect_summary"
             android:defaultValue="false"
             app:singleLineTitle="false" />
 
         <Preference
             android:key="battery_exemption"
-            android:title="Akku-Optimierung"
-            android:summary="Damit die App die Sitzung aus dem Hintergrund starten darf"
+            android:title="@string/pref_battery_exemption_title"
+            android:summary="@string/pref_battery_exemption_summary"
             app:singleLineTitle="false" />
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="GPS">
+    <PreferenceCategory android:title="@string/pref_cat_gps">
 
         <SwitchPreferenceCompat
             android:key="battery_saver"
-            android:title="Akku sparen"
-            android:summary="Position seltener und mit ausgeglichener Priorität abfragen. Die Kamera erhält weiterhin alle 5 s ein Paket."
+            android:title="@string/pref_battery_saver_title"
+            android:summary="@string/pref_battery_saver_summary"
             android:defaultValue="false"
             app:singleLineTitle="false" />
 
         <ListPreference
             android:key="saver_interval_sec"
-            android:title="Positionsabfrage im Akku-Modus"
+            android:title="@string/pref_saver_interval_title"
             android:entries="@array/saver_interval_labels"
             android:entryValues="@array/saver_interval_values"
             android:defaultValue="20"
@@ -42,48 +55,48 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Aufzeichnung">
+    <PreferenceCategory android:title="@string/pref_cat_recording">
 
         <SwitchPreferenceCompat
             android:key="record_track"
-            android:title="GPS-Track aufzeichnen (GPX)"
-            android:summary="Jede Position einer Sitzung wird in eine GPX-Datei geschrieben — für nachträgliches Geotagging"
+            android:title="@string/pref_record_track_title"
+            android:summary="@string/pref_record_track_summary"
             android:defaultValue="false"
             app:singleLineTitle="false" />
 
         <Preference
             android:key="share_tracks"
-            android:title="Tracks teilen"
-            android:summary="Aufgezeichnete GPX-Dateien an andere Apps weitergeben"
+            android:title="@string/pref_share_tracks_title"
+            android:summary="@string/pref_share_tracks_summary"
             app:singleLineTitle="false" />
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Fehlersuche">
+    <PreferenceCategory android:title="@string/pref_cat_troubleshooting">
 
         <Preference
             android:key="export_diagnostics"
-            android:title="Diagnose exportieren"
-            android:summary="Geräte-Infos, Berechtigungen, Einstellungen und das Protokoll der letzten Sitzungen als Textdatei teilen"
+            android:title="@string/pref_export_diag_title"
+            android:summary="@string/pref_export_diag_summary"
             app:singleLineTitle="false" />
 
         <Preference
             android:key="clear_diagnostics"
-            android:title="Protokoll löschen"
+            android:title="@string/pref_clear_diag_title"
             app:singleLineTitle="false" />
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Info">
+    <PreferenceCategory android:title="@string/pref_cat_info">
 
         <Preference
             android:key="version"
-            android:title="Version"
+            android:title="@string/pref_version_title"
             android:selectable="false" />
 
         <Preference
             android:key="github"
-            android:title="Projekt auf GitHub"
+            android:title="@string/pref_github_title"
             android:summary="github.com/Asdoos/SonyGpsApp">
             <intent
                 android:action="android.intent.action.VIEW"

@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
@@ -21,18 +22,19 @@ import java.io.File
 
 /**
  * Settings screen (AndroidX Preference) for everything that is not part of the
- * live session: auto-connect incl. its permission flow, battery saver, GPX
- * recording and sharing, version info.
+ * live session: app language, auto-connect incl. its permission flow, battery
+ * saver, GPX recording and sharing, diagnostics export, version info.
  *
  * The preferences write straight into CameraPrefs' SharedPreferences file, so
  * the service and AutoConnect read them with no extra plumbing. The service
- * listens for changes and applies the GPS mode to a running session.
+ * listens for changes and applies the GPS mode to a running session. The
+ * language switch goes through [AppLocale]; AppCompat recreates the activity.
  */
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Einstellungen"
+        title = getString(R.string.menu_settings)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
@@ -53,7 +55,7 @@ class SettingsActivity : AppCompatActivity() {
         private val backgroundLocation = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-            if (!granted) toast("Kein Standort im Hintergrund — Kamera wird per Benachrichtigung angeboten")
+            if (!granted) toast(getString(R.string.toast_no_bg_location))
             finishAutoConnectSetup()
         }
 
@@ -63,11 +65,16 @@ class SettingsActivity : AppCompatActivity() {
             setPreferencesFromResource(R.xml.preferences, rootKey)
             prefs = CameraPrefs(requireContext())
 
+            findPreference<ListPreference>(CameraPrefs.KEY_APP_LANGUAGE)?.setOnPreferenceChangeListener { _, value ->
+                AppLocale.set(requireContext(), value as String)
+                true
+            }
+
             findPreference<SwitchPreferenceCompat>(CameraPrefs.KEY_AUTO_CONNECT)?.apply {
                 val camera = prefs.cameraName ?: prefs.cameraAddress
                 isEnabled = camera != null
-                if (camera == null) summary = "Zuerst eine Kamera verbinden — sie wird dann gespeichert"
-                else summary = "Sitzung starten, sobald $camera in der Nähe ist"
+                summary = if (camera == null) getString(R.string.pref_auto_connect_no_camera)
+                          else getString(R.string.pref_auto_connect_summary_fmt, camera)
                 setOnPreferenceChangeListener { _, value ->
                     onAutoConnectChanged(value as Boolean)
                     true
@@ -115,16 +122,12 @@ class SettingsActivity : AppCompatActivity() {
             }
             if (!AutoConnect.hasBackgroundLocation(ctx)) {
                 AlertDialog.Builder(ctx)
-                    .setTitle("Standort im Hintergrund")
-                    .setMessage(
-                        "Damit die App die GPS-Übertragung selbst starten kann, während sie geschlossen ist, " +
-                        "braucht sie Standortzugriff „Immer zulassen“. Ohne diese Berechtigung erscheint " +
-                        "stattdessen eine Benachrichtigung, sobald die Kamera in der Nähe ist."
-                    )
-                    .setPositiveButton("Weiter") { _, _ ->
+                    .setTitle(R.string.bg_location_title)
+                    .setMessage(R.string.bg_location_msg)
+                    .setPositiveButton(R.string.next) { _, _ ->
                         backgroundLocation.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                     }
-                    .setNegativeButton("Später") { _, _ -> finishAutoConnectSetup() }
+                    .setNegativeButton(R.string.later) { _, _ -> finishAutoConnectSetup() }
                     .show()
                 return
             }
@@ -146,7 +149,7 @@ class SettingsActivity : AppCompatActivity() {
             val ctx = requireContext()
             val pm  = ctx.getSystemService(PowerManager::class.java)
             if (pm.isIgnoringBatteryOptimizations(ctx.packageName)) {
-                if (force) toast("Akku-Optimierung ist bereits deaktiviert")
+                if (force) toast(getString(R.string.toast_battery_already))
                 return
             }
             try {
@@ -157,7 +160,7 @@ class SettingsActivity : AppCompatActivity() {
                     )
                 )
             } catch (e: ActivityNotFoundException) {
-                toast("Akku-Optimierung bitte manuell für Sony GPS Link deaktivieren")
+                toast(getString(R.string.toast_battery_manual))
             }
         }
 
@@ -166,9 +169,9 @@ class SettingsActivity : AppCompatActivity() {
             val pm  = ctx.getSystemService(PowerManager::class.java)
             findPreference<Preference>("battery_exemption")?.summary =
                 if (pm.isIgnoringBatteryOptimizations(ctx.packageName))
-                    "Deaktiviert — die App darf Sitzungen aus dem Hintergrund starten"
+                    getString(R.string.battery_summary_exempt)
                 else
-                    "Aktiv — Android kann den automatischen Start blockieren. Tippen zum Ausnehmen."
+                    getString(R.string.battery_summary_active)
         }
 
         // ── GPX tracks ──────────────────────────────────────────────────────────
@@ -176,15 +179,15 @@ class SettingsActivity : AppCompatActivity() {
         private fun showTracks() {
             val ctx    = requireContext()
             val tracks = TrackRecorder.listTracks(ctx)
-            if (tracks.isEmpty()) { toast("Noch keine Tracks aufgezeichnet"); return }
+            if (tracks.isEmpty()) { toast(getString(R.string.toast_no_tracks)); return }
             val labels = tracks.map {
                 "${it.nameWithoutExtension}  (${(it.length() + 1023) / 1024} KB)"
             }.toTypedArray()
             AlertDialog.Builder(ctx)
-                .setTitle("Track teilen")
+                .setTitle(R.string.dialog_share_track)
                 .setItems(labels) { _, idx -> shareTracks(listOf(tracks[idx])) }
-                .setNeutralButton("Alle teilen") { _, _ -> shareTracks(tracks) }
-                .setNegativeButton("Abbrechen", null)
+                .setNeutralButton(R.string.share_all) { _, _ -> shareTracks(tracks) }
+                .setNegativeButton(R.string.cancel, null)
                 .show()
         }
 
@@ -200,7 +203,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             send.type = "application/gpx+xml"
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            startActivity(Intent.createChooser(send, "GPX-Track teilen"))
+            startActivity(Intent.createChooser(send, getString(R.string.share_gpx_chooser)))
         }
 
         // ── Diagnostics ─────────────────────────────────────────────────────────
@@ -209,7 +212,8 @@ class SettingsActivity : AppCompatActivity() {
             val ctx = context ?: return
             val kb  = (DiagnosticLog.size(ctx) + 1023) / 1024
             findPreference<Preference>("clear_diagnostics")?.apply {
-                summary   = if (kb == 0L) "Protokoll ist leer" else "Derzeit $kb KB gespeichert"
+                summary   = if (kb == 0L) getString(R.string.diag_summary_empty)
+                            else getString(R.string.diag_summary_size_fmt, kb)
                 isEnabled = kb > 0
             }
         }
@@ -217,15 +221,10 @@ class SettingsActivity : AppCompatActivity() {
         /** The report contains the camera address and positions — say so before sharing. */
         private fun confirmExportDiagnostics() {
             AlertDialog.Builder(requireContext())
-                .setTitle("Diagnose exportieren")
-                .setMessage(
-                    "Die Textdatei enthält Gerätemodell, Android-Version, Berechtigungen, Einstellungen " +
-                    "und das Protokoll der letzten Sitzungen. Darin stehen die Bluetooth-Adresse der Kamera " +
-                    "und die übertragenen GPS-Positionen.\n\n" +
-                    "Hilfreich für Fehlerberichte auf GitHub — bitte vorher prüfen, was geteilt wird."
-                )
-                .setPositiveButton("Teilen") { _, _ -> exportDiagnostics() }
-                .setNegativeButton("Abbrechen", null)
+                .setTitle(R.string.pref_export_diag_title)
+                .setMessage(R.string.diag_export_msg)
+                .setPositiveButton(R.string.share) { _, _ -> exportDiagnostics() }
+                .setNegativeButton(R.string.cancel, null)
                 .show()
         }
 
@@ -237,7 +236,7 @@ class SettingsActivity : AppCompatActivity() {
                 activity?.runOnUiThread {
                     if (!isAdded) return@runOnUiThread
                     result.onSuccess { shareDiagnostics(it) }
-                          .onFailure { toast("Export fehlgeschlagen: ${it.message}") }
+                          .onFailure { toast(getString(R.string.toast_export_failed_fmt, it.message ?: it.toString())) }
                 }
             }.start()
         }
@@ -248,21 +247,21 @@ class SettingsActivity : AppCompatActivity() {
             val send = Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
                 .putExtra(Intent.EXTRA_STREAM, uri)
-                .putExtra(Intent.EXTRA_SUBJECT, "Sony GPS Link — Diagnose")
+                .putExtra(Intent.EXTRA_SUBJECT, getString(R.string.diag_share_subject))
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            startActivity(Intent.createChooser(send, "Diagnose teilen"))
+            startActivity(Intent.createChooser(send, getString(R.string.diag_share_chooser)))
         }
 
         private fun confirmClearDiagnostics() {
             AlertDialog.Builder(requireContext())
-                .setTitle("Protokoll löschen?")
-                .setMessage("Das gespeicherte Diagnose-Protokoll wird entfernt. Die GPX-Tracks bleiben erhalten.")
-                .setPositiveButton("Löschen") { _, _ ->
+                .setTitle(R.string.diag_clear_title)
+                .setMessage(R.string.diag_clear_msg)
+                .setPositiveButton(R.string.delete) { _, _ ->
                     DiagnosticLog.clear(requireContext())
                     updateDiagnosticsSummary()
-                    toast("Protokoll gelöscht")
+                    toast(getString(R.string.toast_log_cleared))
                 }
-                .setNegativeButton("Abbrechen", null)
+                .setNegativeButton(R.string.cancel, null)
                 .show()
         }
 

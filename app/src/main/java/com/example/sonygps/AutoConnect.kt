@@ -55,11 +55,11 @@ object AutoConnect {
         val address = prefs.cameraAddress
         if (!prefs.autoConnect || address == null || GpsForegroundService.sessionActive) return
         if (!hasScanPermission(context)) {
-            diag(context, "Nicht aktiviert: Scan-Berechtigung fehlt")
+            diag(context, R.string.ac_not_armed_permission)
             return
         }
         val scanner = scanner(context) ?: run {
-            diag(context, "Nicht aktiviert: Bluetooth aus")
+            diag(context, R.string.ac_not_armed_bt)
             return
         }
         val filter = ScanFilter.Builder()
@@ -74,9 +74,9 @@ object AutoConnect {
             val pi = scanPendingIntent(context)
             scanner.stopScan(pi)   // re-arming must not stack scans
             val rc = scanner.startScan(listOf(filter), settings, pi)
-            diag(context, if (rc != 0) "Hintergrund-Scan fehlgeschlagen: $rc" else "Hintergrund-Scan aktiv für $address")
+            if (rc != 0) diag(context, R.string.ac_scan_failed_fmt, rc) else diag(context, R.string.ac_armed_fmt, address)
         } catch (e: Exception) {
-            diag(context, "Aktivieren fehlgeschlagen", e)
+            diag(context, R.string.ac_arm_failed, e = e)
         }
     }
 
@@ -84,7 +84,7 @@ object AutoConnect {
         try {
             scanner(context)?.stopScan(scanPendingIntent(context))
         } catch (e: Exception) {
-            diag(context, "Deaktivieren fehlgeschlagen", e)
+            diag(context, R.string.ac_disarm_failed, e = e)
         }
     }
 
@@ -111,22 +111,26 @@ object AutoConnect {
         // Without background location, a location-type foreground service started from
         // the background gets no fixes (and throws on Android 14) → let the user tap instead.
         if (!hasBackgroundLocation(context)) {
-            diag(context, "Kamera in der Nähe — kein Standort im Hintergrund, zeige Benachrichtigung")
+            diag(context, R.string.ac_nearby_no_bg_location)
             showNearbyNotification(context, prefs.cameraName)
             return
         }
         try {
             ContextCompat.startForegroundService(context, GpsForegroundService.connectIntent(context))
-            diag(context, "Kamera in der Nähe — Sitzung gestartet")
+            diag(context, R.string.ac_nearby_started)
         } catch (e: Exception) {
             // ForegroundServiceStartNotAllowedException (Android 12+, app not exempt)
-            diag(context, "Start aus dem Hintergrund verweigert — zeige Benachrichtigung", e)
+            diag(context, R.string.ac_start_refused, e = e)
             showNearbyNotification(context, prefs.cameraName)
         }
     }
 
-    /** Logcat + persistent diagnostic log; auto-connect runs while nobody is watching. */
-    internal fun diag(context: Context, msg: String, e: Throwable? = null) {
+    /**
+     * Logcat + persistent diagnostic log; auto-connect runs while nobody is watching.
+     * The message follows the app language ([AppLocale.wrap]) like the rest of the log.
+     */
+    internal fun diag(context: Context, resId: Int, vararg args: Any, e: Throwable? = null) {
+        val msg = AppLocale.wrap(context).getString(resId, *args)
         if (e == null) {
             Log.i(TAG, msg)
             DiagnosticLog.log(context, TAG, msg)
@@ -166,15 +170,16 @@ object AutoConnect {
     }
 
     private fun showNearbyNotification(context: Context, cameraName: String?) {
-        GpsForegroundService.createNotificationChannel(context)
+        val res = AppLocale.wrap(context)
+        GpsForegroundService.createNotificationChannel(res)
         val connectPi = PendingIntent.getForegroundService(
             context, 1,
             GpsForegroundService.connectIntent(context),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notification = NotificationCompat.Builder(context, GpsForegroundService.CHANNEL_ID)
-            .setContentTitle("${cameraName ?: "Sony-Kamera"} in der Nähe")
-            .setContentText("Tippen, um die GPS-Übertragung zu starten")
+            .setContentTitle(res.getString(R.string.notif_nearby_title_fmt, cameraName ?: res.getString(R.string.default_camera_name)))
+            .setContentText(res.getString(R.string.notif_nearby_text))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(connectPi)
             .setAutoCancel(true)
@@ -188,7 +193,7 @@ object AutoConnect {
 class CameraNearbyReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.hasExtra(BluetoothLeScanner.EXTRA_ERROR_CODE)) {
-            AutoConnect.diag(context, "Hintergrund-Scan-Fehler: ${intent.getIntExtra(BluetoothLeScanner.EXTRA_ERROR_CODE, 0)}")
+            AutoConnect.diag(context, R.string.ac_scan_error_fmt, intent.getIntExtra(BluetoothLeScanner.EXTRA_ERROR_CODE, 0))
             return
         }
         AutoConnect.onCameraNearby(context)
@@ -200,11 +205,11 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
-                AutoConnect.diag(context, "Gerät neu gestartet")
+                AutoConnect.diag(context, R.string.ac_boot)
                 AutoConnect.arm(context)
             }
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                AutoConnect.diag(context, "App aktualisiert auf ${UpdateChecker.installedVersion(context) ?: "?"}")
+                AutoConnect.diag(context, R.string.ac_updated_fmt, UpdateChecker.installedVersion(context)?.toString() ?: "?")
                 // The update APK has done its job — free the cache
                 UpdateChecker.clearDownloads(context)
                 AutoConnect.arm(context)

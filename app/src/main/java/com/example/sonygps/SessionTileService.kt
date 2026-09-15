@@ -27,6 +27,11 @@ import androidx.core.content.ContextCompat
  */
 class SessionTileService : TileService() {
 
+    /** Resources follow the app language below Android 13 (see AppLocale). */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     override fun onTileAdded() = requestUpdate(this)
 
     override fun onStartListening() = refresh()
@@ -48,7 +53,7 @@ class SessionTileService : TileService() {
             } catch (e: Exception) {
                 // ForegroundServiceStartNotAllowedException — let the app do it in the foreground
                 Log.w(TAG, "Start from tile refused — opening app", e)
-                DiagnosticLog.log(this, TAG, "Start über Kachel verweigert — öffne App", e)
+                DiagnosticLog.log(this, TAG, getString(R.string.tile_start_refused), e)
                 openApp()
             }
         }
@@ -60,12 +65,12 @@ class SessionTileService : TileService() {
         val prefs  = CameraPrefs(this)
         val active = GpsForegroundService.sessionActive
         tile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        tile.label = "Sony GPS"
+        tile.label = getString(R.string.tile_label)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             tile.subtitle = when {
-                !active                 -> prefs.cameraName ?: "Keine Kamera"
-                GpsForegroundService.readyForGps -> "GPS aktiv"
-                else                    -> "Verbinde…"
+                !active                 -> prefs.cameraName ?: getString(R.string.tile_no_camera)
+                GpsForegroundService.readyForGps -> getString(R.string.notif_gps_active)
+                else                    -> getString(R.string.tile_connecting)
             }
         }
         tile.updateTile()

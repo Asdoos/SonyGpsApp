@@ -15,7 +15,7 @@ import java.util.*
 import java.util.concurrent.Executors
 
 /**
- * Persistent diagnostic log behind "Diagnose exportieren" in the settings.
+ * Persistent diagnostic log behind "Export diagnostics" in the settings.
  *
  * The session log in MainActivity only lives while the activity is bound to the
  * service, so anything that goes wrong while the app is closed (auto-connect,
@@ -28,7 +28,8 @@ import java.util.concurrent.Executors
  * the callers (BLE callbacks, main thread) are never blocked by disk I/O.
  *
  * The exported report contains the camera's Bluetooth address and the positions
- * that appear in log lines — the settings screen says so before sharing.
+ * that appear in log lines — the settings screen says so before sharing. Its
+ * labels follow the app language ([AppLocale]).
  */
 object DiagnosticLog {
 
@@ -98,11 +99,12 @@ object DiagnosticLog {
         executor.submit {}.get()
         deleteReports(d)
 
+        val res  = AppLocale.wrap(context.applicationContext)
         val name = REPORT_PREFIX + SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date()) + ".txt"
         val out  = File(d, name)
         out.bufferedWriter().use { w ->
             w.write(header(context))
-            w.write("\n══════════ Log ══════════\n")
+            w.write("\n══════════ ${res.getString(R.string.diag_log_header)} ══════════\n")
             var any = false
             for (part in listOf(ROTATED, FILE)) {
                 val f = File(d, part)
@@ -110,7 +112,7 @@ object DiagnosticLog {
                 any = true
                 f.bufferedReader().use { it.copyTo(w) }
             }
-            if (!any) w.write("(leer)\n")
+            if (!any) w.write(res.getString(R.string.diag_empty) + "\n")
         }
         return out
     }
@@ -123,58 +125,78 @@ object DiagnosticLog {
 
     private fun header(context: Context): String = buildString {
         val ctx   = context.applicationContext
+        val res   = AppLocale.wrap(ctx)
         val prefs = CameraPrefs(ctx)
         val pkg   = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
         @Suppress("DEPRECATION")
         val versionCode = pkg.versionCode
+
+        fun s(id: Int) = res.getString(id)
         fun time(ms: Long) = synchronized(stamp) { stamp.format(Date(ms)) }
         fun timeOrDash(ms: Long) = if (ms > 0) time(ms) else "—"
+        fun onOff(v: Boolean) = if (v) s(R.string.on) else s(R.string.off)
+        fun line(label: String, value: Any?) = appendLine((label + ":").padEnd(20) + value)
+        fun section(id: Int) { appendLine(); appendLine("── ${s(id)} ──") }
 
-        appendLine("Sony GPS Link — Diagnose")
-        appendLine("Erstellt: ${time(System.currentTimeMillis())} (${TimeZone.getDefault().id})")
-        appendLine()
-        appendLine("── App ──")
-        appendLine("Version:          ${pkg.versionName} ($versionCode)${if (UpdateChecker.isDebugBuild(ctx)) " DEBUG" else ""}")
-        appendLine("Paket:            ${ctx.packageName}")
-        appendLine("Installiert:      ${time(pkg.firstInstallTime)}")
-        appendLine("Aktualisiert:     ${time(pkg.lastUpdateTime)}")
-        appendLine()
-        appendLine("── Gerät ──")
-        appendLine("Hersteller:       ${Build.MANUFACTURER}")
-        appendLine("Modell:           ${Build.MODEL} (${Build.DEVICE})")
-        appendLine("Android:          ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), Sicherheitspatch ${Build.VERSION.SECURITY_PATCH}")
-        appendLine("Build:            ${Build.DISPLAY}")
-        appendLine()
-        appendLine("── System ──")
+        appendLine(s(R.string.diag_title))
+        line(s(R.string.diag_created), "${time(System.currentTimeMillis())} (${TimeZone.getDefault().id})")
+
+        section(R.string.diag_sec_app)
+        line(s(R.string.diag_version), "${pkg.versionName} ($versionCode)" +
+            if (UpdateChecker.isDebugBuild(ctx)) " ${s(R.string.diag_debug)}" else "")
+        line(s(R.string.diag_package), ctx.packageName)
+        line(s(R.string.diag_installed), time(pkg.firstInstallTime))
+        line(s(R.string.diag_updated), time(pkg.lastUpdateTime))
+
+        section(R.string.diag_sec_device)
+        line(s(R.string.diag_manufacturer), Build.MANUFACTURER)
+        line(s(R.string.diag_model), "${Build.MODEL} (${Build.DEVICE})")
+        line(s(R.string.diag_android), res.getString(
+            R.string.diag_android_fmt, Build.VERSION.RELEASE, Build.VERSION.SDK_INT, Build.VERSION.SECURITY_PATCH))
+        line(s(R.string.diag_build), Build.DISPLAY)
+
+        section(R.string.diag_sec_system)
         val bt = ctx.getSystemService(BluetoothManager::class.java)?.adapter
-        appendLine("Bluetooth:        ${when { bt == null -> "kein Adapter"; bt.isEnabled -> "an"; else -> "aus" }}")
-        appendLine("Standort:         ${if (locationEnabled(ctx)) "an" else "aus"}")
+        line(s(R.string.diag_bluetooth), when {
+            bt == null   -> s(R.string.diag_no_adapter)
+            bt.isEnabled -> s(R.string.on)
+            else         -> s(R.string.off)
+        })
+        line(s(R.string.diag_location), onOff(locationEnabled(ctx)))
         val pm = ctx.getSystemService(PowerManager::class.java)
-        appendLine("Akku-Optimierung: ${if (pm.isIgnoringBatteryOptimizations(ctx.packageName)) "App ausgenommen" else "aktiv (kann Hintergrundstart blockieren)"}")
-        appendLine("Energiesparmodus: ${if (pm.isPowerSaveMode) "an" else "aus"}")
-        appendLine()
-        appendLine("── Berechtigungen ──")
+        line(s(R.string.diag_battery_opt),
+            if (pm.isIgnoringBatteryOptimizations(ctx.packageName)) s(R.string.diag_battery_exempt)
+            else s(R.string.diag_battery_active))
+        line(s(R.string.diag_power_save), onOff(pm.isPowerSaveMode))
+
+        section(R.string.diag_sec_permissions)
         for (p in relevantPermissions()) {
             val granted = ContextCompat.checkSelfPermission(ctx, p) == PackageManager.PERMISSION_GRANTED
             appendLine("${if (granted) "✓" else "✗"} ${p.substringAfterLast('.')}")
         }
-        appendLine()
-        appendLine("── Einstellungen ──")
-        appendLine("Kamera:           ${prefs.cameraName ?: "—"} (${prefs.cameraAddress ?: "keine gespeichert"})")
-        appendLine("Auto-Verbinden:   ${prefs.autoConnect}")
-        appendLine("Akku sparen:      ${prefs.batterySaver} (Fix alle ${prefs.saverIntervalMs / 1000} s)")
-        appendLine("GPX-Aufzeichnung: ${prefs.recordTrack}")
+
+        section(R.string.diag_sec_settings)
+        line(s(R.string.diag_language),
+            prefs.appLanguage.ifEmpty { s(R.string.lang_system) })
+        line(s(R.string.diag_camera),
+            "${prefs.cameraName ?: "—"} (${prefs.cameraAddress ?: s(R.string.diag_none_saved)})")
+        line(s(R.string.diag_auto_connect), onOff(prefs.autoConnect))
+        line(s(R.string.diag_battery_saver), res.getString(
+            R.string.diag_battery_saver_fmt, onOff(prefs.batterySaver), prefs.saverIntervalMs / 1000))
+        line(s(R.string.diag_gpx), onOff(prefs.recordTrack))
         val snooze = prefs.autoConnectSnoozeUntil
-        appendLine("Auto-Connect pausiert bis: ${if (snooze > System.currentTimeMillis()) time(snooze) else "—"}")
-        appendLine("Letzter Auto-Connect-Versuch: ${timeOrDash(prefs.lastAutoConnectAttempt)}")
-        appendLine("Letzte Update-Prüfung: ${timeOrDash(prefs.lastUpdateCheck)}")
-        appendLine()
-        appendLine("── Sitzung ──")
-        appendLine("Aktiv:            ${GpsForegroundService.sessionActive}")
-        appendLine("GPS sendet:       ${GpsForegroundService.readyForGps}")
+        line(s(R.string.diag_snooze_until), if (snooze > System.currentTimeMillis()) time(snooze) else "—")
+        line(s(R.string.diag_last_attempt), timeOrDash(prefs.lastAutoConnectAttempt))
+        line(s(R.string.diag_last_update_check), timeOrDash(prefs.lastUpdateCheck))
+
+        section(R.string.diag_sec_session)
+        line(s(R.string.diag_active), onOff(GpsForegroundService.sessionActive))
+        line(s(R.string.diag_sending), onOff(GpsForegroundService.readyForGps))
         val tracks = TrackRecorder.listTracks(ctx)
-        val newest = tracks.firstOrNull()?.let { ", neuester ${it.name} (${(it.length() + 1023) / 1024} KB)" } ?: ""
-        appendLine("GPX-Tracks:       ${tracks.size}$newest")
+        val newest = tracks.firstOrNull()?.let {
+            res.getString(R.string.diag_newest_fmt, it.name, (it.length() + 1023) / 1024)
+        } ?: ""
+        line(s(R.string.diag_tracks), "${tracks.size}$newest")
     }
 
     private fun locationEnabled(ctx: Context): Boolean {

@@ -59,6 +59,11 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     private val binder = LocalBinder()
     override fun onBind(intent: Intent): IBinder = binder
 
+    /** Resources follow the app language below Android 13 (see AppLocale). */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     // ── Listener (→ MainActivity) ─────────────────────────────────────────────
 
     interface StatusListener {
@@ -99,7 +104,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
             val now = SystemClock.elapsedRealtime()
             if (lastTickElapsed != 0L) {
                 val gapMs = now - lastTickElapsed
-                if (gapMs > TICK_GAP_WARN) log("Sende-Takt ${gapMs / 1000} s ausgesetzt (Gerät im Tiefschlaf?)")
+                if (gapMs > TICK_GAP_WARN) log(getString(R.string.log_tick_gap_fmt, gapMs / 1000))
             }
             lastTickElapsed = now
             sendLatestFix()
@@ -149,10 +154,10 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         fun createNotificationChannel(context: Context) {
             val ch = NotificationChannel(
                 CHANNEL_ID,
-                "Sony GPS Link",
+                context.getString(R.string.app_name),
                 NotificationManager.IMPORTANCE_LOW   // no sound, no pop-up
             ).apply {
-                description = "GPS-Übertragung zur Sony-Kamera"
+                description = context.getString(R.string.notif_channel_desc)
                 setShowBadge(false)
             }
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
@@ -219,8 +224,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         if (ageMs > maxFixAge) {
             if (!staleLogged) {
                 staleLogged = true
-                log("Kein aktueller Fix seit ${ageMs / 1000} s — sende nichts mehr")
-                updateNotification("Warte auf GPS…")
+                log(getString(R.string.log_stale_fix_fmt, ageMs / 1000))
+                updateNotification(getString(R.string.notif_waiting_gps))
             }
             return
         }
@@ -231,7 +236,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         cameraGatt?.sendLocation(now)
         val speedKmh = (fix.speed * 3.6f).toInt()
         updateNotification(
-            "GPS aktiv — %.5f, %.5f  %d km/h".format(fix.latitude, fix.longitude, speedKmh)
+            getString(R.string.notif_gps_active_fmt, fix.latitude, fix.longitude, speedKmh)
         )
     }
 
@@ -244,8 +249,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         prefs.registerOnChange(prefsListener)
         createNotificationChannel(this)
         // Start foreground immediately so Android doesn't kill us before a camera is connected
-        startForeground(NOTIF_ID, buildNotification("Bereit…"))
-        DiagnosticLog.log(this, "Service", "Service gestartet")
+        startForeground(NOTIF_ID, buildNotification(getString(R.string.notif_ready)))
+        DiagnosticLog.log(this, "Service", getString(R.string.log_service_started))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -253,7 +258,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
             ACTION_STOP    -> stopTransfer()
             ACTION_CONNECT -> connectByAddress(intent.getStringExtra(EXTRA_ADDRESS))
             // START_STICKY restart after the process was killed: the session state is lost
-            null           -> DiagnosticLog.log(this, "Service", "Vom System neu gestartet (Prozess wurde beendet)")
+            null           -> DiagnosticLog.log(this, "Service", getString(R.string.log_service_restarted))
         }
         // START_STICKY: system restarts the service if killed (with null intent)
         return START_STICKY
@@ -273,7 +278,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
             setSessionActive(false)
             AutoConnect.arm(this)
         }
-        DiagnosticLog.log(this, "Service", "Service beendet")
+        DiagnosticLog.log(this, "Service", getString(R.string.log_service_stopped))
     }
 
     // ── Public API (called by MainActivity via binder) ────────────────────────
@@ -291,8 +296,9 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         userStopped    = false
         reconnectCount = 0
         val name = device.name ?: device.address
-        log("Verbinde mit $name…")
-        updateNotification("Verbinde mit $name…")
+        val connecting = getString(R.string.status_connecting_fmt, name)
+        log(connecting)
+        updateNotification(connecting)
         cameraGatt?.close()
         cameraGatt = SonyCameraGatt(this, device, this)
         cameraGatt?.connect()
@@ -309,8 +315,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     override fun onConnected() {
         isConnected = true
         isReady     = false
-        updateNotification("Verbunden — GPS-Protokoll…")
-        log("GATT verbunden")
+        updateNotification(getString(R.string.status_connected_protocol))
+        log(getString(R.string.log_gatt_connected))
         statusListener?.onServiceConnected()
     }
 
@@ -321,8 +327,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         SessionTileService.requestUpdate(this)
         reconnectCount = 0
         lastDevice?.let { prefs.rememberCamera(it.address, it.name) }
-        updateNotification("GPS aktiv")
-        log("Bereit — starte GPS + APO-Keepalive (9 s)")
+        updateNotification(getString(R.string.notif_gps_active))
+        log(getString(R.string.log_ready))
         startGps()
         // Packet ticker: sends the latest fix every SEND_INTERVAL (also across reconnects)
         handler.removeCallbacks(sendRunnable)
@@ -342,7 +348,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         statusListener?.onServiceDisconnected()
 
         if (userStopped) {
-            updateNotification("Getrennt")
+            updateNotification(getString(R.string.status_disconnected))
             finishSession()
         } else {
             // Keep the GPX track going while we try to get the camera back
@@ -351,20 +357,20 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         }
     }
 
-    override fun onError(msg: String) = log("FEHLER: $msg")
+    override fun onError(msg: String) = log(getString(R.string.log_error_fmt, msg))
     override fun onLog(msg: String)   = log(msg)
 
     // ── Reconnect ─────────────────────────────────────────────────────────────
 
     private fun scheduleReconnect() {
         if (reconnectCount >= MAX_RECONNECT) {
-            log("Maximale Reconnect-Versuche erreicht")
-            updateNotification("Verbindung verloren")
+            log(getString(R.string.log_max_reconnect))
+            updateNotification(getString(R.string.notif_connection_lost))
             finishSession()
             return
         }
         reconnectCount++
-        val msg = "Reconnect in ${RECONNECT_DELAY / 1000}s… ($reconnectCount/$MAX_RECONNECT)"
+        val msg = getString(R.string.log_reconnect_fmt, RECONNECT_DELAY / 1000, reconnectCount, MAX_RECONNECT)
         log(msg)
         updateNotification(msg)
         handler.postDelayed(reconnectRunnable, RECONNECT_DELAY)
@@ -385,7 +391,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         val target  = address ?: prefs.cameraAddress
         val adapter = getSystemService(BluetoothManager::class.java)?.adapter
         if (target == null || adapter == null || !adapter.isEnabled) {
-            log(if (target == null) "Keine gespeicherte Kamera" else "Bluetooth ist ausgeschaltet")
+            log(getString(if (target == null) R.string.log_no_saved_camera else R.string.log_bluetooth_off))
             if (!sessionActive) stopSelf()
             return
         }
@@ -400,7 +406,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         if (sessionActive) {
             setSessionActive(false)
             AutoConnect.arm(this)
-            log("Sitzung beendet")
+            log(getString(R.string.log_session_ended))
         }
         stopSelf()
     }
@@ -417,8 +423,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         fusedLocation.requestLocationUpdates(
             if (saver) saverRequest(interval) else normalRequest, locationCallback, Looper.getMainLooper()
         )
-        log(if (saver) "GPS: Akku-Modus (Fix alle ${interval / 1000} s, ausgeglichen; Paket alle ${SEND_INTERVAL / 1000} s)"
-            else "GPS: Normal (alle ${interval / 1000} s, hohe Genauigkeit)")
+        log(if (saver) getString(R.string.log_gps_saver_fmt, interval / 1000, SEND_INTERVAL / 1000)
+            else getString(R.string.log_gps_normal_fmt, interval / 1000))
     }
 
     private fun stopGps() {
@@ -454,11 +460,11 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         try {
             val recorder = track ?: TrackRecorder.start(this).also {
                 track = it
-                log("GPX-Aufzeichnung: ${it.file.name}")
+                log(getString(R.string.log_gpx_started_fmt, it.file.name))
             }
             recorder.add(loc)
         } catch (e: Exception) {
-            log("FEHLER: GPX-Aufzeichnung — ${e.message}")
+            log(getString(R.string.log_gpx_error_fmt, e.message ?: e.toString()))
             closeTrack()
         }
     }
@@ -468,9 +474,9 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         track = null
         try {
             recorder.close()
-            log("GPX-Track gespeichert (${recorder.pointCount} Punkte)")
+            log(getString(R.string.log_gpx_saved_fmt, recorder.pointCount))
         } catch (e: Exception) {
-            log("FEHLER: GPX-Track schließen — ${e.message}")
+            log(getString(R.string.log_gpx_close_error_fmt, e.message ?: e.toString()))
         }
     }
 
@@ -495,14 +501,14 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
             .apply { setReferenceCounted(false) }
             .also { wakeLock = it }
         lock.acquire()
-        log("WakeLock gehalten — CPU bleibt für den 5-s-Takt wach")
+        log(getString(R.string.log_wakelock_acquired))
     }
 
     private fun releaseWakeLock() {
         val lock = wakeLock ?: return
         if (lock.isHeld) {
             lock.release()
-            log("WakeLock freigegeben")
+            log(getString(R.string.log_wakelock_released))
         }
     }
 
@@ -546,11 +552,11 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
             PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Sony GPS Link")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openPi)
-            .addAction(0, "Stoppen", stopPi)
+            .addAction(0, getString(R.string.notif_stop), stopPi)
             .setOngoing(true)        // user cannot swipe away
             .setSilent(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)

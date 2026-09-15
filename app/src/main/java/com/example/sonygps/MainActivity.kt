@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
             gpsService = (binder as GpsForegroundService.LocalBinder).service
             gpsService?.statusListener = this@MainActivity
             serviceBound = true
-            log("Service verbunden")
+            log(getString(R.string.log_service_bound))
             // Sync UI with whatever state the service is already in
             syncUiWithServiceState()
         }
@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         binding.btnConnectLast.setOnClickListener { connectToRememberedCamera() }
         binding.btnForget.setOnClickListener { forgetCamera() }
         binding.btnCheckUpdate.setOnClickListener { checkForUpdates(manual = true) }
-        binding.tvVersion.text = "Version ${UpdateChecker.installedVersion(this) ?: "?"}"
+        binding.tvVersion.text = getString(R.string.version_fmt, UpdateChecker.installedVersion(this)?.toString() ?: "?")
 
         requestPermissions()
         updateUi()
@@ -175,15 +175,15 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
     // ── BLE Scan ──────────────────────────────────────────────────────────────
 
     private fun startScan() {
-        if (bluetoothAdapter?.isEnabled != true) { toast("Bluetooth einschalten"); return }
+        if (bluetoothAdapter?.isEnabled != true) { toast(getString(R.string.toast_enable_bluetooth)); return }
         foundCameras.clear()
         scanner = bluetoothAdapter!!.bluetoothLeScanner
         val filter   = ScanFilter.Builder().setManufacturerData(301, byteArrayOf()).build()
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         scanner?.startScan(listOf(filter), settings, scanCallback)
         isScanning = true
-        binding.tvStatus.text = "Suche nach Sony-Kameras…"
-        log("BLE-Scan gestartet")
+        binding.tvStatus.text = getString(R.string.status_scanning)
+        log(getString(R.string.log_scan_started))
         updateUi()
     }
 
@@ -191,23 +191,23 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         if (!isScanning) return
         scanner?.stopScan(scanCallback)
         isScanning = false
-        log("Scan gestoppt — ${foundCameras.size} Kamera(s) gefunden")
+        log(getString(R.string.log_scan_stopped_fmt, foundCameras.size))
         updateUi()
     }
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             if (foundCameras.any { it.device.address == result.device.address }) return
-            log("Gefunden: ${result.device.name ?: "Sony Camera"} (${result.device.address}) ${result.rssi} dBm")
+            log(getString(R.string.log_found_fmt, result.device.name ?: getString(R.string.default_camera_name), result.device.address, result.rssi))
             foundCameras.add(result)
             mainHandler.removeCallbacksAndMessages(null)
             mainHandler.postDelayed({ showCameraChooser() }, 1500)
         }
 
         override fun onScanFailed(errorCode: Int) {
-            log("Scan-Fehler: $errorCode")
+            log(getString(R.string.log_scan_failed_fmt, errorCode))
             isScanning = false
-            binding.tvStatus.text = "Scan fehlgeschlagen (Code $errorCode)"
+            binding.tvStatus.text = getString(R.string.status_scan_failed_fmt, errorCode)
             updateUi()
         }
     }
@@ -216,12 +216,12 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         if (gpsService?.isConnected == true || foundCameras.isEmpty()) return
         stopScan()
         val names = foundCameras.map { r ->
-            "${r.device.name ?: "Sony Camera"}  (${r.device.address})  ${r.rssi} dBm"
+            "${r.device.name ?: getString(R.string.default_camera_name)}  (${r.device.address})  ${r.rssi} dBm"
         }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Kamera auswählen")
+            .setTitle(R.string.dialog_choose_camera)
             .setItems(names) { _, idx -> connectToCamera(foundCameras[idx]) }
-            .setNegativeButton("Abbrechen", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -229,17 +229,17 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
 
     private fun connectToCamera(result: ScanResult) {
         val name = result.device.name ?: result.device.address
-        binding.tvStatus.text = "Verbinde mit $name…"
-        log("Starte Service und verbinde mit $name")
+        binding.tvStatus.text = getString(R.string.status_connecting_fmt, name)
+        log(getString(R.string.log_connecting_fmt, name))
         startSession(result.device.address)
     }
 
     private fun connectToRememberedCamera() {
-        if (bluetoothAdapter?.isEnabled != true) { toast("Bluetooth einschalten"); return }
+        if (bluetoothAdapter?.isEnabled != true) { toast(getString(R.string.toast_enable_bluetooth)); return }
         val name = prefs.cameraName ?: prefs.cameraAddress ?: return
         stopScan()
-        binding.tvStatus.text = "Verbinde mit $name…"
-        log("Starte Service und verbinde mit gespeicherter Kamera $name")
+        binding.tvStatus.text = getString(R.string.status_connecting_fmt, name)
+        log(getString(R.string.log_connecting_remembered_fmt, name))
         startSession(null)
     }
 
@@ -260,15 +260,15 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
 
     private fun forgetCamera() {
         AlertDialog.Builder(this)
-            .setTitle("Kamera vergessen?")
-            .setMessage("${prefs.cameraName ?: prefs.cameraAddress} wird nicht mehr automatisch verbunden.")
-            .setPositiveButton("Vergessen") { _, _ ->
+            .setTitle(R.string.dialog_forget_title)
+            .setMessage(getString(R.string.dialog_forget_msg_fmt, prefs.cameraName ?: prefs.cameraAddress))
+            .setPositiveButton(R.string.btn_forget) { _, _ ->
                 AutoConnect.disarm(this)
                 prefs.forgetCamera()
-                log("Gespeicherte Kamera entfernt")
+                log(getString(R.string.log_camera_forgotten))
                 updateUi()
             }
-            .setNegativeButton("Abbrechen", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -285,44 +285,43 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         if (!manual && now - prefs.lastUpdateCheck < UpdateChecker.CHECK_INTERVAL_MS) return
 
         val installed = UpdateChecker.installedVersion(this)
-        if (manual) log("Suche nach Updates…")
+        if (manual) log(getString(R.string.log_checking_updates))
         updateJob = uiScope.launch {
             try {
                 val release = UpdateChecker.fetchLatest()
                 prefs.lastUpdateCheck = System.currentTimeMillis()
                 if (release == null || installed == null || release.version <= installed) {
-                    if (manual) toast("Sony GPS Link ist aktuell (${installed ?: "?"})")
+                    if (manual) toast(getString(R.string.toast_up_to_date_fmt, installed?.toString() ?: "?"))
                     return@launch
                 }
                 if (!manual && release.tag == prefs.skippedUpdateTag) return@launch
-                log("Update verfügbar: ${release.tag}")
+                log(getString(R.string.log_update_available_fmt, release.tag))
                 showUpdateDialog(release, installed)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (manual) {
-                    log("Update-Prüfung fehlgeschlagen: ${e.message}")
-                    toast("Update-Prüfung fehlgeschlagen")
+                    log(getString(R.string.log_update_check_failed_fmt, e.message))
+                    toast(getString(R.string.toast_update_check_failed))
                 }
             }
         }
     }
 
     private fun showUpdateDialog(release: UpdateChecker.Release, installed: UpdateChecker.Version) {
-        val sb = StringBuilder("Version ${release.version} ist verfügbar, installiert ist $installed.")
+        val sb = StringBuilder(getString(R.string.update_dialog_msg_fmt, release.version.toString(), installed.toString()))
         if (release.notes.isNotEmpty()) sb.append("\n\n").append(release.notes.take(1500))
         if (UpdateChecker.isDebugBuild(this)) {
-            sb.append("\n\n⚠ Dies ist ein Debug-Build. Die Release-APK hat eine andere Signatur " +
-                      "und lässt sich nicht darüber installieren.")
+            sb.append("\n\n").append(getString(R.string.update_debug_warning))
         }
         AlertDialog.Builder(this)
-            .setTitle("Update verfügbar")
+            .setTitle(R.string.update_dialog_title)
             .setMessage(sb)
-            .setPositiveButton("Installieren") { _, _ -> downloadAndInstall(release) }
-            .setNegativeButton("Später", null)
-            .setNeutralButton("Überspringen") { _, _ ->
+            .setPositiveButton(R.string.install) { _, _ -> downloadAndInstall(release) }
+            .setNegativeButton(R.string.later, null)
+            .setNeutralButton(R.string.skip) { _, _ ->
                 prefs.skippedUpdateTag = release.tag
-                log("Update ${release.tag} übersprungen")
+                log(getString(R.string.log_update_skipped_fmt, release.tag))
             }
             .show()
     }
@@ -341,13 +340,13 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
             addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Update wird geladen…")
+            .setTitle(R.string.downloading_title)
             .setView(content)
             .setCancelable(false)
-            .setNegativeButton("Abbrechen") { _, _ -> updateJob?.cancel() }
+            .setNegativeButton(R.string.cancel) { _, _ -> updateJob?.cancel() }
             .show()
 
-        log("Lade ${release.apkName}…")
+        log(getString(R.string.log_downloading_fmt, release.apkName))
         updateJob = uiScope.launch {
             try {
                 val apk = UpdateChecker.download(this@MainActivity, release) { pct ->
@@ -358,18 +357,18 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
                     }
                 }
                 dialog.dismiss()
-                log("Download fertig — Installer wird geöffnet")
+                log(getString(R.string.log_download_done))
                 startInstall(apk)
             } catch (e: CancellationException) {
                 dialog.dismiss()
-                log("Download abgebrochen")
+                log(getString(R.string.log_download_cancelled))
             } catch (e: Exception) {
                 dialog.dismiss()
-                log("Download fehlgeschlagen: ${e.message}")
+                log(getString(R.string.log_download_failed_fmt, e.message))
                 AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Download fehlgeschlagen")
+                    .setTitle(R.string.download_failed_title)
                     .setMessage(e.message ?: e.toString())
-                    .setPositiveButton("OK", null)
+                    .setPositiveButton(R.string.ok, null)
                     .show()
             }
         }
@@ -380,12 +379,9 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         if (UpdateChecker.canInstall(this)) { launchInstaller(apk); return }
         pendingApk = apk
         AlertDialog.Builder(this)
-            .setTitle("Installation erlauben")
-            .setMessage(
-                "Android verlangt einmalig die Erlaubnis, dass Sony GPS Link Updates installieren darf. " +
-                "Nach dem Zurückkehren wird die Installation fortgesetzt."
-            )
-            .setPositiveButton("Einstellungen") { _, _ ->
+            .setTitle(R.string.allow_install_title)
+            .setMessage(R.string.allow_install_msg)
+            .setPositiveButton(R.string.menu_settings) { _, _ ->
                 try {
                     startActivity(UpdateChecker.unknownSourcesSettingsIntent(this))
                 } catch (e: ActivityNotFoundException) {
@@ -393,7 +389,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
                     launchInstaller(apk)  // the installer shows its own prompt then
                 }
             }
-            .setNegativeButton("Abbrechen") { _, _ -> pendingApk = null }
+            .setNegativeButton(R.string.cancel) { _, _ -> pendingApk = null }
             .show()
     }
 
@@ -401,29 +397,29 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         try {
             startActivity(UpdateChecker.installIntent(this, apk))
         } catch (e: ActivityNotFoundException) {
-            log("Kein Paket-Installer gefunden")
-            toast("Kein Paket-Installer gefunden")
+            log(getString(R.string.no_installer))
+            toast(getString(R.string.no_installer))
         }
     }
 
     // ── GpsForegroundService.StatusListener ──────────────────────────────────
 
     override fun onServiceConnected() {
-        binding.tvStatus.text = "Verbunden — GPS-Protokoll…"
-        log("GATT verbunden")
+        binding.tvStatus.text = getString(R.string.status_connected_protocol)
+        log(getString(R.string.log_gatt_connected))
         updateUi()
     }
 
     override fun onServiceReady() {
-        binding.tvStatus.text = "✓ GPS aktiv — Koordinaten werden gesendet"
-        log("GPS aktiv, APO-Keepalive alle 9 s")
+        binding.tvStatus.text = getString(R.string.status_gps_active)
+        log(getString(R.string.log_gps_active))
         updateUi()
     }
 
     override fun onServiceDisconnected() {
         binding.tvGps.text    = "—"
-        binding.tvStatus.text = "Getrennt"
-        log("Verbindung getrennt")
+        binding.tvStatus.text = getString(R.string.status_disconnected)
+        log(getString(R.string.log_disconnected))
         updateUi()
     }
 
@@ -445,10 +441,10 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         val svc = gpsService ?: return
         when {
             svc.isReady      -> {
-                binding.tvStatus.text = "✓ GPS aktiv — Koordinaten werden gesendet"
+                binding.tvStatus.text = getString(R.string.status_gps_active)
             }
             svc.isConnected  -> {
-                binding.tvStatus.text = "Verbunden — GPS-Protokoll…"
+                binding.tvStatus.text = getString(R.string.status_connected_protocol)
             }
         }
         updateUi()
@@ -457,25 +453,25 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
     private fun updateUi() {
         val connected = gpsService?.isConnected ?: false
         val session   = GpsForegroundService.sessionActive
-        binding.btnScan.text            = if (isScanning) "Scan stoppen" else "Kamera suchen"
+        binding.btnScan.text            = getString(if (isScanning) R.string.btn_stop_scan else R.string.btn_scan)
         binding.btnScan.isEnabled       = !connected
         binding.btnDisconnect.isEnabled = connected || session
 
         val address = prefs.cameraAddress
         binding.tvCamera.text = when (address) {
-            null -> "Keine Kamera gespeichert"
-            else -> "${prefs.cameraName ?: "Sony-Kamera"}  ($address)"
+            null -> getString(R.string.camera_none)
+            else -> "${prefs.cameraName ?: getString(R.string.default_camera_name)}  ($address)"
         }
         binding.btnConnectLast.isEnabled = address != null && !session
         binding.btnForget.isEnabled      = address != null && !session
 
         // Compact summary of the settings that shape a session (edited in SettingsActivity)
         val modes = buildList {
-            if (prefs.autoConnect)  add("Auto-Verbinden")
-            if (prefs.batterySaver) add("Akku sparen (${prefs.saverIntervalMs / 1000} s)")
-            if (prefs.recordTrack)  add("GPX-Aufzeichnung")
+            if (prefs.autoConnect)  add(getString(R.string.mode_auto_connect))
+            if (prefs.batterySaver) add(getString(R.string.mode_battery_saver_fmt, (prefs.saverIntervalMs / 1000).toInt()))
+            if (prefs.recordTrack)  add(getString(R.string.mode_gpx))
         }
-        binding.tvModes.text = if (modes.isEmpty()) "Standard-Einstellungen" else modes.joinToString(" · ")
+        binding.tvModes.text = if (modes.isEmpty()) getString(R.string.modes_default) else modes.joinToString(" · ")
     }
 
     /** Shows [msg] in the on-screen log; [persist] also writes it to the diagnostic log. */
@@ -521,7 +517,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         when (requestCode) {
             REQ_PERMISSIONS -> {
                 if (denied.isNotEmpty())
-                    log("Verweigerte Berechtigungen: ${denied.joinToString()}")
+                    log(getString(R.string.log_denied_permissions_fmt, denied.joinToString()))
                 AutoConnect.arm(this)
             }
         }

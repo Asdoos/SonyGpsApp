@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="saver_interval_labels">
-        <item>Alle 10 Sekunden</item>
-        <item>Alle 20 Sekunden</item>
-        <item>Alle 30 Sekunden</item>
-        <item>Alle 60 Sekunden</item>
+        <item>@string/interval_10s</item>
+        <item>@string/interval_20s</item>
+        <item>@string/interval_30s</item>
+        <item>@string/interval_60s</item>
     </string-array>
-    <string-array name="saver_interval_values">
+    <string-array name="saver_interval_values" translatable="false">
         <item>10</item>
         <item>20</item>
         <item>30</item>
         <item>60</item>
+    </string-array>
+
+    <!-- App language: values are BCP-47 tags, "" follows the system (AppLocale.SYSTEM) -->
+    <string-array name="language_labels">
+        <item>@string/lang_system</item>
+        <item>@string/lang_de</item>
+        <item>@string/lang_en</item>
+    </string-array>
+    <string-array name="language_values" translatable="false">
+        <item></item>
+        <item>de</item>
+        <item>en</item>
     </string-array>
 </resources>

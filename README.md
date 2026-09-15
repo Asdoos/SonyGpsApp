@@ -21,7 +21,7 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 | BLE camera discovery | Scan for Sony devices (manufacturer ID 301) |
 | GPS transfer | WGS-84, every 5 seconds, 91 or 95-byte packet |
 | Battery saver | Fixes every 10–60 s with balanced priority; the camera still gets a packet every 5 s. A partial wake lock keeps the CPU timers running with the screen off |
-| Settings screen | Auto-connect, battery saver, GPX recording, track sharing, battery-optimization shortcut, diagnostics export |
+| Settings screen | Language, auto-connect, battery saver, GPX recording, track sharing, battery-optimization shortcut, diagnostics export |
 | APO keepalive | Prevents camera sleep mode, every 9 seconds |
 | Auto-reconnect | Up to 10 attempts after unexpected disconnection |
 | Foreground Service | GPS + BLE run persistently, even with the app closed |
@@ -31,6 +31,7 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 | In-app update | Checks GitHub releases once a day, downloads the new APK and opens the installer |
 | Quick Settings tile | Start or stop the session from the notification shade without opening the app |
 | Diagnostics export | Persistent log of all sessions plus device, permission and settings snapshot, shared as a text file for bug reports |
+| Languages | English and German; switchable in the settings independent of the system language |
 
 ---
 
@@ -381,6 +382,8 @@ SonyGpsApp/
 │   │   ├── CameraPrefs.kt            Persistent settings (remembered camera, switches)
 │   │   ├── TrackRecorder.kt          GPX track recording
 │   │   ├── DiagnosticLog.kt          Persistent diagnostic log + report for the export
+│   │   ├── AppLocale.kt              App language switch (per-app locales, service context wrapping)
+│   │   ├── SonyGpsApp.kt             Application: applies the stored language at process start
 │   │   ├── UpdateChecker.kt          In-app update from GitHub releases
 │   │   └── SessionTileService.kt     Quick Settings tile: start/stop the session
 │   ├── res/
@@ -389,6 +392,8 @@ SonyGpsApp/
 │   │   ├── mipmap-anydpi-v26/
 │   │   ├── xml/file_paths.xml        FileProvider paths for GPX/diagnostics sharing and update APKs
 │   │   ├── xml/preferences.xml       Settings screen definition
+│   │   ├── xml/locales_config.xml    Languages offered in Android 13+ per-app language settings
+│   │   ├── values/strings.xml        English strings (default); values-de/ holds German
 │   │   ├── menu/main_menu.xml        Action bar: settings entry
 │   │   └── values/themes.xml, colors.xml
 │   └── AndroidManifest.xml

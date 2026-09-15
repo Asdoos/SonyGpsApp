@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Deutsche Texte. Schlüssel und Platzhalter müssen zu values/strings.xml passen. -->
+<resources>
+
+    <!-- ── App / Hauptbildschirm ─────────────────────────────────────────── -->
+    <string name="app_tagline">Sendet GPS-Koordinaten via BLE an Sony-Kameras</string>
+    <string name="label_status">STATUS</string>
+    <string name="label_camera">KAMERA</string>
+    <string name="label_log">LOG</string>
+    <string name="status_not_connected">Nicht verbunden</string>
+    <string name="camera_none">Keine Kamera gespeichert</string>
+    <string name="default_camera_name">Sony-Kamera</string>
+    <string name="btn_connect">Verbinden</string>
+    <string name="btn_forget">Vergessen</string>
+    <string name="btn_check_update">Nach Updates suchen</string>
+    <string name="btn_scan">Kamera suchen</string>
+    <string name="btn_stop_scan">Scan stoppen</string>
+    <string name="btn_disconnect">Trennen</string>
+    <string name="version_fmt">Version %s</string>
+    <string name="menu_settings">Einstellungen</string>
+
+    <!-- Gemeinsame Schaltflächen -->
+    <string name="cancel">Abbrechen</string>
+    <string name="install">Installieren</string>
+    <string name="later">Später</string>
+    <string name="skip">Überspringen</string>
+    <string name="next">Weiter</string>
+    <string name="share">Teilen</string>
+    <string name="share_all">Alle teilen</string>
+    <string name="delete">Löschen</string>
+    <string name="on">an</string>
+    <string name="off">aus</string>
+
+    <!-- Hauptbildschirm: Scan / Verbinden -->
+    <string name="log_service_bound">Service verbunden</string>
+    <string name="toast_enable_bluetooth">Bluetooth einschalten</string>
+    <string name="status_scanning">Suche nach Sony-Kameras…</string>
+    <string name="log_scan_started">BLE-Scan gestartet</string>
+    <string name="log_scan_stopped_fmt">Scan gestoppt — %d Kamera(s) gefunden</string>
+    <string name="log_found_fmt">Gefunden: %1$s (%2$s) %3$d dBm</string>
+    <string name="log_scan_failed_fmt">Scan-Fehler: %d</string>
+    <string name="status_scan_failed_fmt">Scan fehlgeschlagen (Code %d)</string>
+    <string name="dialog_choose_camera">Kamera auswählen</string>
+    <string name="status_connecting_fmt">Verbinde mit %s…</string>
+    <string name="log_connecting_fmt">Starte Service und verbinde mit %s</string>
+    <string name="log_connecting_remembered_fmt">Starte Service und verbinde mit gespeicherter Kamera %s</string>
+    <string name="dialog_forget_title">Kamera vergessen?</string>
+    <string name="dialog_forget_msg_fmt">%s wird nicht mehr automatisch verbunden.</string>
+    <string name="log_camera_forgotten">Gespeicherte Kamera entfernt</string>
+    <string name="log_denied_permissions_fmt">Verweigerte Berechtigungen: %s</string>
+
+    <!-- Hauptbildschirm: Sitzungsstatus -->
+    <string name="status_connected_protocol">Verbunden — GPS-Protokoll…</string>
+    <string name="log_gatt_connected">GATT verbunden</string>
+    <string name="status_gps_active">✓ GPS aktiv — Koordinaten werden gesendet</string>
+    <string name="log_gps_active">GPS aktiv, APO-Keepalive alle 9 s</string>
+    <string name="status_disconnected">Getrennt</string>
+    <string name="log_disconnected">Verbindung getrennt</string>
+    <string name="mode_auto_connect">Auto-Verbinden</string>
+    <string name="mode_battery_saver_fmt">Akku sparen (%d s)</string>
+    <string name="mode_gpx">GPX-Aufzeichnung</string>
+    <string name="modes_default">Standard-Einstellungen</string>
+
+    <!-- Hauptbildschirm: In-App-Update -->
+    <string name="log_checking_updates">Suche nach Updates…</string>
+    <string name="toast_up_to_date_fmt">Sony GPS Link ist aktuell (%s)</string>
+    <string name="log_update_available_fmt">Update verfügbar: %s</string>
+    <string name="log_update_check_failed_fmt">Update-Prüfung fehlgeschlagen: %s</string>
+    <string name="toast_update_check_failed">Update-Prüfung fehlgeschlagen</string>
+    <string name="update_dialog_title">Update verfügbar</string>
+    <string name="update_dialog_msg_fmt">Version %1$s ist verfügbar, installiert ist %2$s.</string>
+    <string name="update_debug_warning">⚠ Dies ist ein Debug-Build. Die Release-APK hat eine andere Signatur und lässt sich nicht darüber installieren.</string>
+    <string name="log_update_skipped_fmt">Update %s übersprungen</string>
+    <string name="downloading_title">Update wird geladen…</string>
+    <string name="log_downloading_fmt">Lade %s…</string>
+    <string name="log_download_done">Download fertig — Installer wird geöffnet</string>
+    <string name="log_download_cancelled">Download abgebrochen</string>
+    <string name="log_download_failed_fmt">Download fehlgeschlagen: %s</string>
+    <string name="download_failed_title">Download fehlgeschlagen</string>
+    <string name="allow_install_title">Installation erlauben</string>
+    <string name="allow_install_msg">Android verlangt einmalig die Erlaubnis, dass Sony GPS Link Updates installieren darf. Nach dem Zurückkehren wird die Installation fortgesetzt.</string>
+    <string name="no_installer">Kein Paket-Installer gefunden</string>
+    <string name="err_download_http_fmt">Download fehlgeschlagen: HTTP %d</string>
+    <string name="err_download_incomplete_fmt">Download unvollständig (%1$d von %2$d Bytes)</string>
+    <string name="err_create_file_fmt">Konnte %s nicht anlegen</string>
+
+    <!-- ── Foreground-Service / Benachrichtigungen ───────────────────────── -->
+    <string name="notif_channel_desc">GPS-Übertragung zur Sony-Kamera</string>
+    <string name="notif_stop">Stoppen</string>
+    <string name="notif_ready">Bereit…</string>
+    <string name="notif_waiting_gps">Warte auf GPS…</string>
+    <string name="notif_gps_active">GPS aktiv</string>
+    <string name="notif_gps_active_fmt">GPS aktiv — %1$.5f, %2$.5f  %3$d km/h</string>
+    <string name="notif_connection_lost">Verbindung verloren</string>
+    <string name="log_stale_fix_fmt">Kein aktueller Fix seit %d s — sende nichts mehr</string>
+    <string name="log_service_started">Service gestartet</string>
+    <string name="log_service_restarted">Vom System neu gestartet (Prozess wurde beendet)</string>
+    <string name="log_service_stopped">Service beendet</string>
+    <string name="log_ready">Bereit — starte GPS + APO-Keepalive (9 s)</string>
+    <string name="log_error_fmt">FEHLER: %s</string>
+    <string name="log_max_reconnect">Maximale Reconnect-Versuche erreicht</string>
+    <string name="log_reconnect_fmt">Reconnect in %1$d s… (%2$d/%3$d)</string>
+    <string name="log_no_saved_camera">Keine gespeicherte Kamera</string>
+    <string name="log_bluetooth_off">Bluetooth ist ausgeschaltet</string>
+    <string name="log_session_ended">Sitzung beendet</string>
+    <string name="log_gps_saver_fmt">GPS: Akku-Modus (Fix alle %1$d s, ausgeglichen; Paket alle %2$d s)</string>
+    <string name="log_gps_normal_fmt">GPS: Normal (alle %d s, hohe Genauigkeit)</string>
+    <string name="log_gpx_started_fmt">GPX-Aufzeichnung: %s</string>
+    <string name="log_gpx_error_fmt">FEHLER: GPX-Aufzeichnung — %s</string>
+    <string name="log_gpx_saved_fmt">GPX-Track gespeichert (%d Punkte)</string>
+    <string name="log_gpx_close_error_fmt">FEHLER: GPX-Track schließen — %s</string>
+    <string name="log_tick_gap_fmt">Sende-Takt %d s ausgesetzt (Gerät im Tiefschlaf?)</string>
+    <string name="log_wakelock_acquired">WakeLock gehalten — CPU bleibt für den 5-s-Takt wach</string>
+    <string name="log_wakelock_released">WakeLock freigegeben</string>
+
+    <!-- ── Auto-Verbinden ────────────────────────────────────────────────── -->
+    <string name="ac_not_armed_permission">Nicht aktiviert: Scan-Berechtigung fehlt</string>
+    <string name="ac_not_armed_bt">Nicht aktiviert: Bluetooth aus</string>
+    <string name="ac_scan_failed_fmt">Hintergrund-Scan fehlgeschlagen: %d</string>
+    <string name="ac_armed_fmt">Hintergrund-Scan aktiv für %s</string>
+    <string name="ac_arm_failed">Aktivieren fehlgeschlagen</string>
+    <string name="ac_disarm_failed">Deaktivieren fehlgeschlagen</string>
+    <string name="ac_nearby_started">Kamera in der Nähe — Sitzung gestartet</string>
+    <string name="ac_start_refused">Start aus dem Hintergrund verweigert — zeige Benachrichtigung</string>
+    <string name="ac_nearby_no_bg_location">Kamera in der Nähe — kein Standort im Hintergrund, zeige Benachrichtigung</string>
+    <string name="ac_scan_error_fmt">Hintergrund-Scan-Fehler: %d</string>
+    <string name="ac_boot">Gerät neu gestartet</string>
+    <string name="ac_updated_fmt">App aktualisiert auf %s</string>
+    <string name="notif_nearby_title_fmt">%s in der Nähe</string>
+    <string name="notif_nearby_text">Tippen, um die GPS-Übertragung zu starten</string>
+
+    <!-- ── Schnelleinstellungs-Kachel ────────────────────────────────────── -->
+    <string name="tile_no_camera">Keine Kamera</string>
+    <string name="tile_connecting">Verbinde…</string>
+    <string name="tile_start_refused">Start über Kachel verweigert — öffne App</string>
+
+    <!-- ── Einstellungen ─────────────────────────────────────────────────── -->
+    <string name="pref_cat_language">Sprache</string>
+    <string name="pref_language_title">App-Sprache</string>
+    <string name="lang_system">Systemsprache</string>
+
+    <string name="pref_cat_connection">Verbindung</string>
+    <string name="pref_auto_connect_title">Automatisch verbinden</string>
+    <string name="pref_auto_connect_summary">Sitzung starten, sobald die gespeicherte Kamera in der Nähe ist</string>
+    <string name="pref_auto_connect_summary_fmt">Sitzung starten, sobald %s in der Nähe ist</string>
+    <string name="pref_auto_connect_no_camera">Zuerst eine Kamera verbinden — sie wird dann gespeichert</string>
+    <string name="pref_battery_exemption_title">Akku-Optimierung</string>
+    <string name="pref_battery_exemption_summary">Damit die App die Sitzung aus dem Hintergrund starten darf</string>
+    <string name="battery_summary_exempt">Deaktiviert — die App darf Sitzungen aus dem Hintergrund starten</string>
+    <string name="battery_summary_active">Aktiv — Android kann den automatischen Start blockieren. Tippen zum Ausnehmen.</string>
+    <string name="toast_battery_already">Akku-Optimierung ist bereits deaktiviert</string>
+    <string name="toast_battery_manual">Akku-Optimierung bitte manuell für Sony GPS Link deaktivieren</string>
+    <string name="bg_location_title">Standort im Hintergrund</string>
+    <string name="bg_location_msg">Damit die App die GPS-Übertragung selbst starten kann, während sie geschlossen ist, braucht sie Standortzugriff „Immer zulassen“. Ohne diese Berechtigung erscheint stattdessen eine Benachrichtigung, sobald die Kamera in der Nähe ist.</string>
+    <string name="toast_no_bg_location">Kein Standort im Hintergrund — Kamera wird per Benachrichtigung angeboten</string>
+
+    <string name="pref_battery_saver_title">Akku sparen</string>
+    <string name="pref_battery_saver_summary">Position seltener und mit ausgeglichener Priorität abfragen. Die Kamera erhält weiterhin alle 5 s ein Paket.</string>
+    <string name="pref_saver_interval_title">Positionsabfrage im Akku-Modus</string>
+    <string name="interval_10s">Alle 10 Sekunden</string>
+    <string name="interval_20s">Alle 20 Sekunden</string>
+    <string name="interval_30s">Alle 30 Sekunden</string>
+    <string name="interval_60s">Alle 60 Sekunden</string>
+
+    <string name="pref_cat_recording">Aufzeichnung</string>
+    <string name="pref_record_track_title">GPS-Track aufzeichnen (GPX)</string>
+    <string name="pref_record_track_summary">Jede Position einer Sitzung wird in eine GPX-Datei geschrieben — für nachträgliches Geotagging</string>
+    <string name="pref_share_tracks_title">Tracks teilen</string>
+    <string name="pref_share_tracks_summary">Aufgezeichnete GPX-Dateien an andere Apps weitergeben</string>
+    <string name="toast_no_tracks">Noch keine Tracks aufgezeichnet</string>
+    <string name="dialog_share_track">Track teilen</string>
+    <string name="share_gpx_chooser">GPX-Track teilen</string>
+
+    <string name="pref_cat_troubleshooting">Fehlersuche</string>
+    <string name="pref_export_diag_title">Diagnose exportieren</string>
+    <string name="pref_export_diag_summary">Geräte-Infos, Berechtigungen, Einstellungen und das Protokoll der letzten Sitzungen als Textdatei teilen</string>
+    <string name="pref_clear_diag_title">Protokoll löschen</string>
+    <string name="diag_summary_empty">Protokoll ist leer</string>
+    <string name="diag_summary_size_fmt">Derzeit %d KB gespeichert</string>
+    <string name="diag_export_msg">Die Textdatei enthält Gerätemodell, Android-Version, Berechtigungen, Einstellungen und das Protokoll der letzten Sitzungen. Darin stehen die Bluetooth-Adresse der Kamera und die übertragenen GPS-Positionen.\n\nHilfreich für Fehlerberichte auf GitHub — bitte vorher prüfen, was geteilt wird.</string>
+    <string name="toast_export_failed_fmt">Export fehlgeschlagen: %s</string>
+    <string name="diag_share_subject">Sony GPS Link — Diagnose</string>
+    <string name="diag_share_chooser">Diagnose teilen</string>
+    <string name="diag_clear_title">Protokoll löschen?</string>
+    <string name="diag_clear_msg">Das gespeicherte Diagnose-Protokoll wird entfernt. Die GPX-Tracks bleiben erhalten.</string>
+    <string name="toast_log_cleared">Protokoll gelöscht</string>
+
+    <string name="pref_cat_info">Info</string>
+    <string name="pref_version_title">Version</string>
+    <string name="pref_github_title">Projekt auf GitHub</string>
+
+    <!-- ── Diagnose-Bericht ──────────────────────────────────────────────── -->
+    <string name="diag_title">Sony GPS Link — Diagnose</string>
+    <string name="diag_created">Erstellt</string>
+    <string name="diag_sec_app">App</string>
+    <string name="diag_version">Version</string>
+    <string name="diag_package">Paket</string>
+    <string name="diag_installed">Installiert</string>
+    <string name="diag_updated">Aktualisiert</string>
+    <string name="diag_sec_device">Gerät</string>
+    <string name="diag_manufacturer">Hersteller</string>
+    <string name="diag_model">Modell</string>
+    <string name="diag_android">Android</string>
+    <string name="diag_android_fmt">%1$s (API %2$d), Sicherheitspatch %3$s</string>
+    <string name="diag_build">Build</string>
+    <string name="diag_sec_system">System</string>
+    <string name="diag_bluetooth">Bluetooth</string>
+    <string name="diag_no_adapter">kein Adapter</string>
+    <string name="diag_location">Standort</string>
+    <string name="diag_battery_opt">Akku-Optimierung</string>
+    <string name="diag_battery_exempt">App ausgenommen</string>
+    <string name="diag_battery_active">aktiv (kann Hintergrundstart blockieren)</string>
+    <string name="diag_power_save">Energiesparmodus</string>
+    <string name="diag_sec_permissions">Berechtigungen</string>
+    <string name="diag_sec_settings">Einstellungen</string>
+    <string name="diag_camera">Kamera</string>
+    <string name="diag_none_saved">keine gespeichert</string>
+    <string name="diag_language">App-Sprache</string>
+    <string name="diag_auto_connect">Auto-Verbinden</string>
+    <string name="diag_battery_saver">Akku sparen</string>
+    <string name="diag_battery_saver_fmt">%1$s (Fix alle %2$d s)</string>
+    <string name="diag_gpx">GPX-Aufzeichnung</string>
+    <string name="diag_snooze_until">Auto-Connect pausiert bis</string>
+    <string name="diag_last_attempt">Letzter Auto-Connect-Versuch</string>
+    <string name="diag_last_update_check">Letzte Update-Prüfung</string>
+    <string name="diag_sec_session">Sitzung</string>
+    <string name="diag_active">Aktiv</string>
+    <string name="diag_sending">GPS sendet</string>
+    <string name="diag_tracks">GPX-Tracks</string>
+    <string name="diag_newest_fmt">, neuester %1$s (%2$d KB)</string>
+    <string name="diag_log_header">Log</string>
+    <string name="diag_empty">(leer)</string>
+
+</resources>

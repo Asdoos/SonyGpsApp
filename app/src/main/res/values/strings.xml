@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default (English) strings. German lives in values-de/strings.xml.
+     Every user-visible text, including log lines and notifications, comes from here so
+     the language switch in the settings covers the whole app. -->
+<resources>
+
+    <!-- ── App / main screen ─────────────────────────────────────────────── -->
+    <string name="app_name" translatable="false">Sony GPS Link</string>
+    <string name="app_tagline">Sends GPS coordinates to Sony cameras via BLE</string>
+    <string name="label_status">STATUS</string>
+    <string name="label_gps" translatable="false">GPS</string>
+    <string name="label_camera">CAMERA</string>
+    <string name="label_log">LOG</string>
+    <string name="status_not_connected">Not connected</string>
+    <string name="camera_none">No camera saved</string>
+    <string name="default_camera_name">Sony camera</string>
+    <string name="btn_connect">Connect</string>
+    <string name="btn_forget">Forget</string>
+    <string name="btn_check_update">Check for updates</string>
+    <string name="btn_scan">Search camera</string>
+    <string name="btn_stop_scan">Stop scan</string>
+    <string name="btn_disconnect">Disconnect</string>
+    <string name="version_fmt">Version %s</string>
+    <string name="menu_settings">Settings</string>
+
+    <!-- Common buttons -->
+    <string name="cancel">Cancel</string>
+    <string name="ok" translatable="false">OK</string>
+    <string name="install">Install</string>
+    <string name="later">Later</string>
+    <string name="skip">Skip</string>
+    <string name="next">Continue</string>
+    <string name="share">Share</string>
+    <string name="share_all">Share all</string>
+    <string name="delete">Delete</string>
+    <string name="on">on</string>
+    <string name="off">off</string>
+
+    <!-- Main screen: scan / connect -->
+    <string name="log_service_bound">Service connected</string>
+    <string name="toast_enable_bluetooth">Turn on Bluetooth</string>
+    <string name="status_scanning">Searching for Sony cameras…</string>
+    <string name="log_scan_started">BLE scan started</string>
+    <string name="log_scan_stopped_fmt">Scan stopped — %d camera(s) found</string>
+    <string name="log_found_fmt">Found: %1$s (%2$s) %3$d dBm</string>
+    <string name="log_scan_failed_fmt">Scan error: %d</string>
+    <string name="status_scan_failed_fmt">Scan failed (code %d)</string>
+    <string name="dialog_choose_camera">Choose camera</string>
+    <string name="status_connecting_fmt">Connecting to %s…</string>
+    <string name="log_connecting_fmt">Starting service, connecting to %s</string>
+    <string name="log_connecting_remembered_fmt">Starting service, connecting to saved camera %s</string>
+    <string name="dialog_forget_title">Forget camera?</string>
+    <string name="dialog_forget_msg_fmt">%s will no longer be connected automatically.</string>
+    <string name="log_camera_forgotten">Saved camera removed</string>
+    <string name="log_denied_permissions_fmt">Denied permissions: %s</string>
+
+    <!-- Main screen: session status -->
+    <string name="status_connected_protocol">Connected — GPS protocol…</string>
+    <string name="log_gatt_connected">GATT connected</string>
+    <string name="status_gps_active">✓ GPS active — sending coordinates</string>
+    <string name="log_gps_active">GPS active, APO keepalive every 9 s</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="log_disconnected">Connection lost</string>
+    <string name="mode_auto_connect">Auto-connect</string>
+    <string name="mode_battery_saver_fmt">Battery saver (%d s)</string>
+    <string name="mode_gpx">GPX recording</string>
+    <string name="modes_default">Default settings</string>
+
+    <!-- Main screen: in-app update -->
+    <string name="log_checking_updates">Checking for updates…</string>
+    <string name="toast_up_to_date_fmt">Sony GPS Link is up to date (%s)</string>
+    <string name="log_update_available_fmt">Update available: %s</string>
+    <string name="log_update_check_failed_fmt">Update check failed: %s</string>
+    <string name="toast_update_check_failed">Update check failed</string>
+    <string name="update_dialog_title">Update available</string>
+    <string name="update_dialog_msg_fmt">Version %1$s is available, installed is %2$s.</string>
+    <string name="update_debug_warning">⚠ This is a debug build. The release APK has a different signature and cannot be installed over it.</string>
+    <string name="log_update_skipped_fmt">Update %s skipped</string>
+    <string name="downloading_title">Downloading update…</string>
+    <string name="log_downloading_fmt">Downloading %s…</string>
+    <string name="log_download_done">Download finished — opening installer</string>
+    <string name="log_download_cancelled">Download cancelled</string>
+    <string name="log_download_failed_fmt">Download failed: %s</string>
+    <string name="download_failed_title">Download failed</string>
+    <string name="allow_install_title">Allow installation</string>
+    <string name="allow_install_msg">Android asks once for permission to let Sony GPS Link install updates. The installation continues after you return.</string>
+    <string name="no_installer">No package installer found</string>
+    <string name="err_download_http_fmt">Download failed: HTTP %d</string>
+    <string name="err_download_incomplete_fmt">Download incomplete (%1$d of %2$d bytes)</string>
+    <string name="err_create_file_fmt">Could not create %s</string>
+
+    <!-- ── Foreground service / notifications ────────────────────────────── -->
+    <string name="notif_channel_desc">GPS transfer to the Sony camera</string>
+    <string name="notif_stop">Stop</string>
+    <string name="notif_ready">Ready…</string>
+    <string name="notif_waiting_gps">Waiting for GPS…</string>
+    <string name="notif_gps_active">GPS active</string>
+    <string name="notif_gps_active_fmt">GPS active — %1$.5f, %2$.5f  %3$d km/h</string>
+    <string name="notif_connection_lost">Connection lost</string>
+    <string name="log_stale_fix_fmt">No recent fix for %d s — sending stopped</string>
+    <string name="log_service_started">Service started</string>
+    <string name="log_service_restarted">Restarted by the system (process was killed)</string>
+    <string name="log_service_stopped">Service stopped</string>
+    <string name="log_ready">Ready — starting GPS + APO keepalive (9 s)</string>
+    <string name="log_error_fmt">ERROR: %s</string>
+    <string name="log_max_reconnect">Maximum reconnect attempts reached</string>
+    <string name="log_reconnect_fmt">Reconnect in %1$d s… (%2$d/%3$d)</string>
+    <string name="log_no_saved_camera">No saved camera</string>
+    <string name="log_bluetooth_off">Bluetooth is off</string>
+    <string name="log_session_ended">Session ended</string>
+    <string name="log_gps_saver_fmt">GPS: battery mode (fix every %1$d s, balanced; packet every %2$d s)</string>
+    <string name="log_gps_normal_fmt">GPS: normal (every %d s, high accuracy)</string>
+    <string name="log_gpx_started_fmt">GPX recording: %s</string>
+    <string name="log_gpx_error_fmt">ERROR: GPX recording — %s</string>
+    <string name="log_gpx_saved_fmt">GPX track saved (%d points)</string>
+    <string name="log_gpx_close_error_fmt">ERROR: closing GPX track — %s</string>
+    <string name="log_tick_gap_fmt">Packet ticker paused for %d s (device in deep sleep?)</string>
+    <string name="log_wakelock_acquired">Wake lock held — CPU stays awake for the 5 s cadence</string>
+    <string name="log_wakelock_released">Wake lock released</string>
+
+    <!-- ── Auto-connect ──────────────────────────────────────────────────── -->
+    <string name="ac_not_armed_permission">Not armed: scan permission missing</string>
+    <string name="ac_not_armed_bt">Not armed: Bluetooth off</string>
+    <string name="ac_scan_failed_fmt">Background scan failed: %d</string>
+    <string name="ac_armed_fmt">Background scan armed for %s</string>
+    <string name="ac_arm_failed">Arming failed</string>
+    <string name="ac_disarm_failed">Disarming failed</string>
+    <string name="ac_nearby_started">Camera nearby — session started</string>
+    <string name="ac_start_refused">Background start refused — showing notification</string>
+    <string name="ac_nearby_no_bg_location">Camera nearby — no background location, showing notification</string>
+    <string name="ac_scan_error_fmt">Background scan error: %d</string>
+    <string name="ac_boot">Device rebooted</string>
+    <string name="ac_updated_fmt">App updated to %s</string>
+    <string name="notif_nearby_title_fmt">%s nearby</string>
+    <string name="notif_nearby_text">Tap to start the GPS transfer</string>
+
+    <!-- ── Quick Settings tile ───────────────────────────────────────────── -->
+    <string name="tile_label" translatable="false">Sony GPS</string>
+    <string name="tile_no_camera">No camera</string>
+    <string name="tile_connecting">Connecting…</string>
+    <string name="tile_start_refused">Start from tile refused — opening app</string>
+
+    <!-- ── Settings screen ───────────────────────────────────────────────── -->
+    <string name="pref_cat_language">Language</string>
+    <string name="pref_language_title">App language</string>
+    <string name="lang_system">System default</string>
+    <string name="lang_de" translatable="false">Deutsch</string>
+    <string name="lang_en" translatable="false">English</string>
+
+    <string name="pref_cat_connection">Connection</string>
+    <string name="pref_auto_connect_title">Connect automatically</string>
+    <string name="pref_auto_connect_summary">Start the session as soon as the saved camera is nearby</string>
+    <string name="pref_auto_connect_summary_fmt">Start the session as soon as %s is nearby</string>
+    <string name="pref_auto_connect_no_camera">Connect a camera first — it will then be saved</string>
+    <string name="pref_battery_exemption_title">Battery optimization</string>
+    <string name="pref_battery_exemption_summary">So the app may start the session from the background</string>
+    <string name="battery_summary_exempt">Disabled — the app may start sessions from the background</string>
+    <string name="battery_summary_active">Active — Android may block the automatic start. Tap to exempt.</string>
+    <string name="toast_battery_already">Battery optimization is already disabled</string>
+    <string name="toast_battery_manual">Please disable battery optimization for Sony GPS Link manually</string>
+    <string name="bg_location_title">Background location</string>
+    <string name="bg_location_msg">To start the GPS transfer by itself while the app is closed, the app needs location access set to “Allow all the time”. Without it, a notification appears instead as soon as the camera is nearby.</string>
+    <string name="toast_no_bg_location">No background location — the camera will be offered via notification</string>
+
+    <string name="pref_cat_gps" translatable="false">GPS</string>
+    <string name="pref_battery_saver_title">Battery saver</string>
+    <string name="pref_battery_saver_summary">Request the position less often and with balanced priority. The camera still receives a packet every 5 s.</string>
+    <string name="pref_saver_interval_title">Position updates in battery mode</string>
+    <string name="interval_10s">Every 10 seconds</string>
+    <string name="interval_20s">Every 20 seconds</string>
+    <string name="interval_30s">Every 30 seconds</string>
+    <string name="interval_60s">Every 60 seconds</string>
+
+    <string name="pref_cat_recording">Recording</string>
+    <string name="pref_record_track_title">Record GPS track (GPX)</string>
+    <string name="pref_record_track_summary">Every position of a session is written to a GPX file — for geotagging photos later</string>
+    <string name="pref_share_tracks_title">Share tracks</string>
+    <string name="pref_share_tracks_summary">Pass recorded GPX files on to other apps</string>
+    <string name="toast_no_tracks">No tracks recorded yet</string>
+    <string name="dialog_share_track">Share track</string>
+    <string name="share_gpx_chooser">Share GPX track</string>
+
+    <string name="pref_cat_troubleshooting">Troubleshooting</string>
+    <string name="pref_export_diag_title">Export diagnostics</string>
+    <string name="pref_export_diag_summary">Share device info, permissions, settings and the log of recent sessions as a text file</string>
+    <string name="pref_clear_diag_title">Delete log</string>
+    <string name="diag_summary_empty">Log is empty</string>
+    <string name="diag_summary_size_fmt">%d KB stored</string>
+    <string name="diag_export_msg">The text file contains the device model, Android version, permissions, settings and the log of recent sessions. It includes the camera’s Bluetooth address and the transmitted GPS positions.\n\nUseful for bug reports on GitHub — please check what you share.</string>
+    <string name="toast_export_failed_fmt">Export failed: %s</string>
+    <string name="diag_share_subject">Sony GPS Link — Diagnostics</string>
+    <string name="diag_share_chooser">Share diagnostics</string>
+    <string name="diag_clear_title">Delete log?</string>
+    <string name="diag_clear_msg">The stored diagnostic log will be removed. GPX tracks are kept.</string>
+    <string name="toast_log_cleared">Log deleted</string>
+
+    <string name="pref_cat_info">Info</string>
+    <string name="pref_version_title">Version</string>
+    <string name="pref_github_title">Project on GitHub</string>
+
+    <!-- ── Diagnostic report ─────────────────────────────────────────────── -->
+    <string name="diag_title">Sony GPS Link — Diagnostics</string>
+    <string name="diag_created">Created</string>
+    <string name="diag_sec_app">App</string>
+    <string name="diag_version">Version</string>
+    <string name="diag_debug" translatable="false">DEBUG</string>
+    <string name="diag_package">Package</string>
+    <string name="diag_installed">Installed</string>
+    <string name="diag_updated">Updated</string>
+    <string name="diag_sec_device">Device</string>
+    <string name="diag_manufacturer">Manufacturer</string>
+    <string name="diag_model">Model</string>
+    <string name="diag_android">Android</string>
+    <string name="diag_android_fmt">%1$s (API %2$d), security patch %3$s</string>
+    <string name="diag_build">Build</string>
+    <string name="diag_sec_system">System</string>
+    <string name="diag_bluetooth">Bluetooth</string>
+    <string name="diag_no_adapter">no adapter</string>
+    <string name="diag_location">Location</string>
+    <string name="diag_battery_opt">Battery optimization</string>
+    <string name="diag_battery_exempt">app exempt</string>
+    <string name="diag_battery_active">active (may block background start)</string>
+    <string name="diag_power_save">Power save mode</string>
+    <string name="diag_sec_permissions">Permissions</string>
+    <string name="diag_sec_settings">Settings</string>
+    <string name="diag_camera">Camera</string>
+    <string name="diag_none_saved">none saved</string>
+    <string name="diag_language">App language</string>
+    <string name="diag_auto_connect">Auto-connect</string>
+    <string name="diag_battery_saver">Battery saver</string>
+    <string name="diag_battery_saver_fmt">%1$s (fix every %2$d s)</string>
+    <string name="diag_gpx">GPX recording</string>
+    <string name="diag_snooze_until">Auto-connect paused until</string>
+    <string name="diag_last_attempt">Last auto-connect attempt</string>
+    <string name="diag_last_update_check">Last update check</string>
+    <string name="diag_sec_session">Session</string>
+    <string name="diag_active">Active</string>
+    <string name="diag_sending">GPS sending</string>
+    <string name="diag_tracks">GPX tracks</string>
+    <string name="diag_newest_fmt">, newest %1$s (%2$d KB)</string>
+    <string name="diag_log_header">Log</string>
+    <string name="diag_empty">(empty)</string>
+
+</resources>

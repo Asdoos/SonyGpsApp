@@ -109,7 +109,7 @@ object UpdateChecker {
     suspend fun fetchLatest(): Release? = withContext(Dispatchers.IO) {
         val json = JSONObject(httpGet(LATEST_URL))
         val tag  = json.getString("tag_name")
-        val version = Version.parse(tag) ?: throw IOException("Unbekanntes Tag-Format: $tag")
+        val version = Version.parse(tag) ?: throw IOException("Unknown tag format: $tag")
 
         val assets = json.optJSONArray("assets")
         var apk: JSONObject? = null
@@ -138,7 +138,7 @@ object UpdateChecker {
         try {
             conn.setRequestProperty("Accept", "application/vnd.github+json")
             if (conn.responseCode != HttpURLConnection.HTTP_OK)
-                throw IOException("GitHub antwortet mit HTTP ${conn.responseCode}")
+                throw IOException("GitHub responded with HTTP ${conn.responseCode}")
             return conn.inputStream.bufferedReader().use { it.readText() }
         } finally {
             conn.disconnect()
@@ -174,7 +174,7 @@ object UpdateChecker {
         val conn = open(release.apkUrl)
         try {
             if (conn.responseCode != HttpURLConnection.HTTP_OK)
-                throw IOException("Download fehlgeschlagen: HTTP ${conn.responseCode}")
+                throw IOException(context.getString(R.string.err_download_http_fmt, conn.responseCode))
             val total = conn.contentLengthLong
             var done  = 0L
             var lastPct = -2
@@ -192,14 +192,14 @@ object UpdateChecker {
                     }
                 }
             }
-            if (total > 0 && done != total) throw IOException("Download unvollständig ($done von $total Bytes)")
+            if (total > 0 && done != total) throw IOException(context.getString(R.string.err_download_incomplete_fmt, done, total))
         } catch (e: Exception) {
             tmp.delete()
             throw e
         } finally {
             conn.disconnect()
         }
-        if (!tmp.renameTo(target)) throw IOException("Konnte ${target.name} nicht anlegen")
+        if (!tmp.renameTo(target)) throw IOException(context.getString(R.string.err_create_file_fmt, target.name))
         target
     }
 

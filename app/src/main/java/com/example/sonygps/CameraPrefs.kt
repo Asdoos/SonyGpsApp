@@ -58,6 +58,11 @@ class CameraPrefs(context: Context) {
         get()  = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
         set(v) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, v).apply()
 
+    /** App language as BCP-47 tag ("de", "en"); "" follows the system. See [AppLocale]. */
+    var appLanguage: String
+        get()  = prefs.getString(KEY_APP_LANGUAGE, AppLocale.SYSTEM) ?: AppLocale.SYSTEM
+        set(v) = prefs.edit().putString(KEY_APP_LANGUAGE, v).apply()
+
     /** Release tag the user dismissed with "skip"; not offered again automatically. */
     var skippedUpdateTag: String?
         get()  = prefs.getString(KEY_SKIPPED_UPDATE, null)
@@ -90,6 +95,7 @@ class CameraPrefs(context: Context) {
         const val KEY_RECORD_TRACK   = "record_track"
         const val KEY_BATTERY_SAVER  = "battery_saver"
         const val KEY_SAVER_INTERVAL = "saver_interval_sec"
+        const val KEY_APP_LANGUAGE   = "app_language"
         const val DEFAULT_SAVER_INTERVAL_SEC = 20L
 
         private const val KEY_SNOOZE_UNTIL      = "auto_connect_snooze_until"

@@ -12,6 +12,12 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+### Neu
+- **Sprachwechsel:** Die App gibt es jetzt auf Deutsch und Englisch. Unter
+  Einstellungen → Sprache lässt sich die Sprache unabhängig vom System wählen;
+  Benachrichtigungen, Kachel und Protokoll folgen mit. Standard bleibt die
+  Systemsprache, ab Android 13 auch über die System-Einstellung „App-Sprachen“.
+
 ## [0.6.0] - 2026-09-15
 
 ### Neu
