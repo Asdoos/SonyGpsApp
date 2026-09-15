@@ -10,7 +10,7 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 
 > Reverse-engineered from **Sony Creators App v3.3.1** (XAPK, decompiled with jadx 1.5.5).
 
-**[⬇ Download latest APK](https://github.com/Asdoos/SonyGpsApp/releases/latest)**
+**[⬇ Download latest APK](https://github.com/Asdoos/SonyGpsApp/releases/latest)** · [Changelog](CHANGELOG.md)
 
 ---
 

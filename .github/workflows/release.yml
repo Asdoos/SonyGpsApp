@@ -50,10 +50,30 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
+      # The release body is the CHANGELOG.md section for this tag. It is what the
+      # in-app updater shows in its dialog, so a missing or empty section fails
+      # the release instead of publishing an auto-generated commit list.
+      - name: Extract changelog section
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          awk -v v="$version" '
+            /^## \[/ { if (found) exit; found = (index($0, "## [" v "]") == 1); next }
+            /^\[.*\]: / { if (found) exit }   # link references at the end of the file
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "CHANGELOG.md has no section '## [$version]' — add release notes before cutting the release" >&2
+            exit 1
+          fi
+          printf '\n\n**Alle Änderungen:** https://github.com/%s/blob/%s/CHANGELOG.md\n' "$GITHUB_REPOSITORY" "$TAG" >> release-notes.md
+          echo "Release notes:"; cat release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           name: Release ${{ inputs.tag || github.ref_name }}
+          body_path: release-notes.md
           files: app/build/outputs/apk/release/*.apk
-          generate_release_notes: true
