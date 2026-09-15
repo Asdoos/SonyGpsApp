@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome tile icon: location pin with a small BLE arc, tinted by the system -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,8 C38,8 25,21 25,37 C25,59 54,92 54,92 C54,92 83,59 83,37 C83,21 70,8 54,8 Z M54,47 C48.5,47 44,42.5 44,37 C44,31.5 48.5,27 54,27 C59.5,27 64,31.5 64,37 C64,42.5 59.5,47 54,47 Z"/>
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M38,100 Q54,92 70,100"/>
+</vector>

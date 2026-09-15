@@ -92,6 +92,11 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         var sessionActive = false
             private set
 
+        /** True while the handshake is complete and GPS packets are being sent (for the QS tile). */
+        @Volatile
+        var readyForGps = false
+            private set
+
         /** Starts a session with [address], or with the remembered camera if null. */
         fun connectIntent(context: Context, address: String? = null) =
             Intent(context, GpsForegroundService::class.java).apply {
@@ -175,7 +180,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         cameraGatt?.close()
         cameraGatt = null
         if (sessionActive) {
-            sessionActive = false
+            setSessionActive(false)
             AutoConnect.arm(this)
         }
     }
@@ -185,7 +190,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     @SuppressLint("MissingPermission")
     fun connectToCamera(device: BluetoothDevice) {
         if (!sessionActive) {
-            sessionActive = true
+            setSessionActive(true)
             AutoConnect.disarm(this)
         }
         AutoConnect.cancelNearbyNotification(this)
@@ -220,6 +225,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     @SuppressLint("MissingPermission")
     override fun onReady() {
         isReady        = true
+        readyForGps    = true
+        SessionTileService.requestUpdate(this)
         reconnectCount = 0
         lastDevice?.let { prefs.rememberCamera(it.address, it.name) }
         updateNotification("GPS aktiv")
@@ -231,6 +238,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     override fun onDisconnected() {
         isConnected = false
         isReady     = false
+        readyForGps = false
+        SessionTileService.requestUpdate(this)
         cameraGatt?.close()
         cameraGatt = null
         statusListener?.onServiceDisconnected()
@@ -292,7 +301,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         stopGps()
         closeTrack()
         if (sessionActive) {
-            sessionActive = false
+            setSessionActive(false)
             AutoConnect.arm(this)
             log("Sitzung beendet")
         }
@@ -362,6 +371,13 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
+
+    /** Updates the session flag and pushes the new state to the Quick Settings tile. */
+    private fun setSessionActive(active: Boolean) {
+        sessionActive = active
+        if (!active) readyForGps = false
+        SessionTileService.requestUpdate(this)
+    }
 
     private fun shutdownAndStop() {
         handler.removeCallbacks(reconnectRunnable)

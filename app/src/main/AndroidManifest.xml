@@ -81,6 +81,21 @@
             android:foregroundServiceType="location|connectedDevice"
             android:exported="false" />
 
+        <!-- Quick Settings tile: start/stop the session from the notification shade -->
+        <service
+            android:name=".SessionTileService"
+            android:label="Sony GPS"
+            android:icon="@drawable/ic_qs_tile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+
         <!-- Background scan results for the remembered camera (AutoConnect) -->
         <receiver
             android:name=".CameraNearbyReceiver"

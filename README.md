@@ -28,6 +28,7 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 | Auto-connect | Background BLE scan starts the session when the remembered camera is in range |
 | GPX track recording | Every fix of a session is written to a GPX file for geotagging photos later |
 | In-app update | Checks GitHub releases once a day, downloads the new APK and opens the installer |
+| Quick Settings tile | Start or stop the session from the notification shade without opening the app |
 
 ---
 
@@ -252,6 +253,20 @@ The installer only accepts an APK signed with the same key as the installed app 
 
 ---
 
+### 6d. Quick Settings Tile
+
+`SessionTileService` adds a **"Sony GPS"** tile to the Quick Settings panel (add it via the panel's edit mode):
+
+| App state | Tile | Tap |
+|---|---|---|
+| Session running | active, subtitle "GPS aktiv" / "Verbinde…" | stops the session (same as the notification's "Stoppen") |
+| Camera remembered, idle | inactive, subtitle = camera name | connects to the remembered camera |
+| No camera remembered / permissions missing / start refused | inactive | opens the app |
+
+The tile is declared as an *active tile*, so the service pushes state changes (`requestListeningState`) when a session starts, the handshake completes or the session ends — the tile is correct even while the panel is closed. While a tile handles a tap the process counts as foreground, which is what allows starting the location foreground service from the shade on Android 12+.
+
+---
+
 ### 7. Foreground Service & Energy Efficiency
 
 #### Why a Foreground Service?
@@ -345,7 +360,8 @@ SonyGpsApp/
 │   │   ├── AutoConnect.kt            Background scan for the remembered camera + receivers
 │   │   ├── CameraPrefs.kt            Persistent settings (remembered camera, switches)
 │   │   ├── TrackRecorder.kt          GPX track recording
-│   │   └── UpdateChecker.kt          In-app update from GitHub releases
+│   │   ├── UpdateChecker.kt          In-app update from GitHub releases
+│   │   └── SessionTileService.kt     Quick Settings tile: start/stop the session
 │   ├── res/
 │   │   ├── layout/activity_main.xml
 │   │   ├── drawable/ic_launcher_*.xml
