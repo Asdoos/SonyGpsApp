@@ -22,7 +22,7 @@ jobs:
       - name: Read version
         id: version
         run: |
-          tag="$(tr -d ' \t\r\n' < release.version)"
+          tag="$(grep -v '^[[:space:]]*#' release.version | tr -d ' \t\r\n')"
           if [ -z "$tag" ]; then
             echo "release.version is empty" >&2
             exit 1
