@@ -15,6 +15,8 @@
     <string name="hint_lost">Connect again whenever you are ready.</string>
     <string name="hint_scan_failed_fmt">Check that Bluetooth is on, then try again. (Code %d)</string>
     <string name="status_scan_failed">Search failed</string>
+    <string name="status_not_found">No camera found</string>
+    <string name="hint_not_found">Turn the camera on and enable Bluetooth in its menu. It must be paired once in the Android Bluetooth settings.</string>
     <string name="card_camera_title">Your camera</string>
     <string name="camera_none">No camera connected yet</string>
     <string name="camera_none_hint">Your camera is remembered here after the first connection.</string>
@@ -63,6 +65,7 @@
     <string name="status_scanning">Looking for your camera…</string>
     <string name="log_scan_started">BLE scan started</string>
     <string name="log_scan_stopped_fmt">Scan stopped — %d camera(s) found</string>
+    <string name="log_scan_timeout">Scan timed out — no camera found</string>
     <string name="log_found_fmt">Found: %1$s (%2$s) %3$d dBm</string>
     <string name="log_scan_failed_fmt">Scan error: %d</string>
     <string name="dialog_choose_camera">Choose camera</string>

@@ -5,11 +5,33 @@
     in a collapsed "Activity" section at the bottom. Colours come from the
     Material 3 theme so the screen follows light/dark and dynamic colour.
 -->
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Own toolbar instead of the window ActionBar: with edge-to-edge (targetSdk 35+)
+         the AppCompat window ActionBar no longer offsets the content. AppBarLayout
+         pads itself for the status bar via fitsSystemWindows. -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="@string/app_name" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+<androidx.core.widget.NestedScrollView
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
     android:fillViewport="true"
     android:clipToPadding="false">
 
@@ -371,3 +393,4 @@
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
+</LinearLayout>

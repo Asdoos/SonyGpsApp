@@ -12,6 +12,21 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+### Geändert
+- **Suche endet nach 30 Sekunden:** Findet der Scan keine Kamera, zeigt die
+  Statuskarte „Keine Kamera gefunden“ mit den Punkten, die zu prüfen sind
+  (Kamera an, Bluetooth im Kameramenü aktiv, einmal in Android gekoppelt).
+  Vorher lief die Suche endlos weiter und zog dabei am Akku.
+- Die Auswahl- und Bestätigungsdialoge in den Einstellungen (Sprache, Intervall,
+  Diagnose, Protokoll löschen) sehen jetzt aus wie die Dialoge auf dem
+  Hauptbildschirm: abgerundet im Material-3-Stil.
+
+### Behoben
+- **Inhalt unter der Titelleiste (Android 15/16):** In Version 0.9.0 lag die
+  Statuskarte hinter der Statusleiste und der App-Leiste, der obere Teil war
+  verdeckt. Beide Bildschirme haben jetzt eine eigene Toolbar, die den Platz für
+  die Statusleiste selbst reserviert.
+
 ## [0.9.0] - 2026-09-15
 
 ### Geändert

@@ -11,7 +11,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
@@ -41,10 +41,12 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = getString(R.string.menu_settings)
+        setContentView(R.layout.activity_settings)
+        setSupportActionBar(findViewById(R.id.toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         // Edge-to-edge on Android 15+: keep the preference list clear of the navigation bar.
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
+        // The AppBarLayout in the layout handles the status bar itself.
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.settingsContainer)) { v, insets ->
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
@@ -54,7 +56,7 @@ class SettingsActivity : AppCompatActivity() {
         updates = UpdateFlow(this) { DiagnosticLog.log(this, "App", it) }
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(android.R.id.content, SettingsFragment())
+                .replace(R.id.settingsContainer, SettingsFragment())
                 .commit()
         }
     }
@@ -143,6 +145,25 @@ class SettingsActivity : AppCompatActivity() {
             updateDiagnosticsSummary()
         }
 
+        /**
+         * AndroidX Preference shows list dialogs with a plain AppCompat AlertDialog
+         * (square, no M3 shape). Show them with the Material builder instead so
+         * they match the dialogs on the main screen.
+         */
+        override fun onDisplayPreferenceDialog(preference: Preference) {
+            if (preference !is ListPreference) { super.onDisplayPreferenceDialog(preference); return }
+            val checked = preference.findIndexOfValue(preference.value)
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(preference.dialogTitle ?: preference.title)
+                .setSingleChoiceItems(preference.entries, checked) { dialog, which ->
+                    val value = preference.entryValues[which].toString()
+                    if (preference.callChangeListener(value)) preference.value = value
+                    dialog.dismiss()
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+
         // ── Auto-connect ────────────────────────────────────────────────────────
 
         private fun onAutoConnectChanged(enabled: Boolean) {
@@ -153,7 +174,7 @@ class SettingsActivity : AppCompatActivity() {
                 return
             }
             if (!AutoConnect.hasBackgroundLocation(ctx)) {
-                AlertDialog.Builder(ctx)
+                MaterialAlertDialogBuilder(ctx)
                     .setTitle(R.string.bg_location_title)
                     .setMessage(R.string.bg_location_msg)
                     .setPositiveButton(R.string.next) { _, _ ->
@@ -215,7 +236,7 @@ class SettingsActivity : AppCompatActivity() {
             val labels = tracks.map {
                 "${it.nameWithoutExtension}  (${(it.length() + 1023) / 1024} KB)"
             }.toTypedArray()
-            AlertDialog.Builder(ctx)
+            MaterialAlertDialogBuilder(ctx)
                 .setTitle(R.string.dialog_share_track)
                 .setItems(labels) { _, idx -> shareTracks(listOf(tracks[idx])) }
                 .setNeutralButton(R.string.share_all) { _, _ -> shareTracks(tracks) }
@@ -252,7 +273,7 @@ class SettingsActivity : AppCompatActivity() {
 
         /** The report contains the camera address and positions — say so before sharing. */
         private fun confirmExportDiagnostics() {
-            AlertDialog.Builder(requireContext())
+            MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.pref_export_diag_title)
                 .setMessage(R.string.diag_export_msg)
                 .setPositiveButton(R.string.share) { _, _ -> exportDiagnostics() }
@@ -285,7 +306,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun confirmClearDiagnostics() {
-            AlertDialog.Builder(requireContext())
+            MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.diag_clear_title)
                 .setMessage(R.string.diag_clear_msg)
                 .setPositiveButton(R.string.delete) { _, _ ->

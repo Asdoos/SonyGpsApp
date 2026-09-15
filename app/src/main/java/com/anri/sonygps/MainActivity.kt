@@ -66,11 +66,13 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         const val REQ_PERMISSIONS = 1
         const val RSSI_STRONG = -60
         const val RSSI_MEDIUM = -75
+        /** Low-latency scanning is expensive; give up after this and tell the user why. */
+        const val SCAN_TIMEOUT_MS = 30_000L
     }
 
     // ── Screen state ─────────────────────────────────────────────────────────
 
-    private enum class Phase { IDLE, SCANNING, CONNECTING, LINKING, ACTIVE, ENDED, SCAN_FAILED }
+    private enum class Phase { IDLE, SCANNING, NOT_FOUND, CONNECTING, LINKING, ACTIVE, ENDED, SCAN_FAILED }
 
     private var phase = Phase.IDLE
     /** Camera the current attempt targets (for the hero text). */
@@ -112,9 +114,10 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setSupportActionBar(binding.toolbar)
         // Android 15+ draws edge-to-edge: keep the content clear of the navigation bar
-        // and display cutouts. The action bar already handles the status bar.
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+        // and display cutouts. The AppBarLayout above handles the status bar itself.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.scroll) { v, insets ->
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
@@ -197,16 +200,29 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         scanner?.startScan(listOf(filter), settings, scanCallback)
         isScanning = true
         phase = Phase.SCANNING
+        mainHandler.removeCallbacks(scanTimeout)
+        mainHandler.postDelayed(scanTimeout, SCAN_TIMEOUT_MS)
         log(getString(R.string.log_scan_started))
         render()
     }
 
     private fun stopScan() {
         if (!isScanning) return
+        mainHandler.removeCallbacks(scanTimeout)
         scanner?.stopScan(scanCallback)
         isScanning = false
         if (phase == Phase.SCANNING) phase = Phase.IDLE
         log(getString(R.string.log_scan_stopped_fmt, foundCameras.size))
+        render()
+    }
+
+    /** Nothing advertised within the timeout: stop scanning and explain what to check. */
+    private val scanTimeout = Runnable {
+        if (!isScanning || foundCameras.isNotEmpty()) return@Runnable
+        scanner?.stopScan(scanCallback)
+        isScanning = false
+        phase = Phase.NOT_FOUND
+        log(getString(R.string.log_scan_timeout))
         render()
     }
 
@@ -390,6 +406,9 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
                 R.drawable.ic_check_circle, Tone.ACTIVE, busy = false)
             Phase.ENDED -> hero(
                 R.string.status_disconnected, getString(R.string.hint_lost),
+                R.drawable.ic_bluetooth_disabled, Tone.NEUTRAL, busy = false)
+            Phase.NOT_FOUND -> hero(
+                R.string.status_not_found, getString(R.string.hint_not_found),
                 R.drawable.ic_bluetooth_disabled, Tone.NEUTRAL, busy = false)
             Phase.SCAN_FAILED -> hero(
                 R.string.status_scan_failed, getString(R.string.hint_scan_failed_fmt, scanErrorCode),
