@@ -1,0 +1,34 @@
+name: Release APK from version file
+
+# Releases can be cut without pushing a tag: bump release.version on any
+# branch and this workflow builds the APK and creates the tag and release.
+on:
+  push:
+    paths:
+      - 'release.version'
+
+jobs:
+  read-version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: |
+          tag="$(tr -d ' \t\r\n' < release.version)"
+          if [ -z "$tag" ]; then
+            echo "release.version is empty" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: read-version
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.read-version.outputs.tag }}
+    secrets: inherit
