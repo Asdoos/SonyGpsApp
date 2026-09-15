@@ -187,8 +187,12 @@ class CameraNearbyReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_MY_PACKAGE_REPLACED -> AutoConnect.arm(context)
+            Intent.ACTION_BOOT_COMPLETED -> AutoConnect.arm(context)
+            Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                // The update APK has done its job — free the cache
+                UpdateChecker.clearDownloads(context)
+                AutoConnect.arm(context)
+            }
         }
     }
 }

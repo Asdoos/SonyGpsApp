@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- GPX tracks shared via FileProvider (TrackRecorder.tracksDir) -->
 <paths>
+    <!-- GPX tracks shared via FileProvider (TrackRecorder.tracksDir) -->
     <files-path name="tracks" path="tracks/" />
+    <!-- Downloaded update APKs handed to the package installer (UpdateChecker) -->
+    <cache-path name="updates" path="updates/" />
 </paths>
