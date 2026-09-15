@@ -123,10 +123,16 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         // Set initial state before attaching listeners, so they only react to the user
         binding.swAutoConnect.isChecked = prefs.autoConnect
         binding.swRecordTrack.isChecked = prefs.recordTrack
+        binding.swBatterySaver.isChecked = prefs.batterySaver
         binding.swAutoConnect.setOnCheckedChangeListener { _, checked -> setAutoConnect(checked) }
         binding.swRecordTrack.setOnCheckedChangeListener { _, checked ->
             prefs.recordTrack = checked
             log(if (checked) "GPX-Aufzeichnung an" else "GPX-Aufzeichnung aus")
+        }
+        binding.swBatterySaver.setOnCheckedChangeListener { _, checked ->
+            prefs.batterySaver = checked
+            log(if (checked) "Akku-Modus an" else "Akku-Modus aus")
+            gpsService?.applyGpsMode()   // takes effect in a running session
         }
 
         requestPermissions()

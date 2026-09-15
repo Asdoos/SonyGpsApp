@@ -20,6 +20,7 @@ Android app that transfers GPS coordinates from a smartphone to Sony cameras via
 |---|---|
 | BLE camera discovery | Scan for Sony devices (manufacturer ID 301) |
 | GPS transfer | WGS-84, every 5 seconds, 91 or 95-byte packet |
+| Battery saver | GPS every 20 seconds with balanced priority instead of high accuracy |
 | APO keepalive | Prevents camera sleep mode, every 9 seconds |
 | Auto-reconnect | Up to 10 attempts after unexpected disconnection |
 | Foreground Service | GPS + BLE run persistently, even with the app closed |
@@ -281,6 +282,10 @@ android:foregroundServiceType="location|connectedDevice"
 
 → **~4–7% battery per hour** on a typical 4,000 mAh device  
 → Comparable to a GPS tracking app like Strava running in the background
+
+#### Battery saver ("Akku sparen")
+
+With the switch enabled the location request changes from `PRIORITY_HIGH_ACCURACY` every 5 s to `PRIORITY_BALANCED_POWER_ACCURACY` every 20 s (minimum 10 s). Fused location may then serve fixes from WiFi/cell positioning and keep the GPS chip off between requests, which roughly halves the app's share of the drain. Photos get a position that is at most ~20 s old and typically within ~100 m — sufficient for geotagging. The setting applies immediately, also in a running session; GPX recording uses the same fixes, so tracks become coarser in this mode.
 
 ---
 

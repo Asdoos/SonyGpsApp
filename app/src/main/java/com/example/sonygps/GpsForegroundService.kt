@@ -31,7 +31,8 @@ import com.google.android.gms.location.*
  *  - Optional GPX recording (TrackRecorder); while recording, GPS keeps running
  *    during reconnect attempts so the track has no gaps
  *
- * GPS interval: 5 s (camera doesn't need sub-second accuracy, saves ~15% vs 2 s)
+ * GPS interval: 5 s (camera doesn't need sub-second accuracy, saves ~15% vs 2 s),
+ * or 20 s with balanced priority in battery-saver mode (CameraPrefs.batterySaver).
  */
 class GpsForegroundService : Service(), SonyCameraGatt.Listener {
 
@@ -82,6 +83,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         private const val EXTRA_ADDRESS = "address"
 
         private const val MAX_RECONNECT     = 10
+        private const val NORMAL_INTERVAL   = 5_000L   // ms
+        private const val SAVER_INTERVAL    = 20_000L  // ms
         private const val RECONNECT_DELAY   = 4_000L   // ms
 
         /** True from connect until the session ends (stop, reconnects exhausted). */
@@ -109,12 +112,22 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         }
     }
 
-    // ── GPS request: 5 s interval ─────────────────────────────────────────────
-    // The camera only needs a new fix when the position actually changes.
-    // 5 s vs 2 s saves ~15 % GPS wakeup overhead with negligible accuracy loss.
-    private val locationRequest = LocationRequest.Builder(
-        Priority.PRIORITY_HIGH_ACCURACY, 5_000L
+    // ── GPS request ───────────────────────────────────────────────────────────
+    // Normal: HIGH_ACCURACY every 5 s. The camera only needs a new fix when the
+    // position actually changes; 5 s vs 2 s saves ~15 % GPS wakeup overhead.
+    // Battery saver: BALANCED_POWER_ACCURACY every 20 s. Fused location may then
+    // serve fixes from WiFi/cell and keep the GPS chip off between requests — for
+    // geotagging photos a position that is a few seconds old is irrelevant.
+    private val normalRequest = LocationRequest.Builder(
+        Priority.PRIORITY_HIGH_ACCURACY, NORMAL_INTERVAL
     ).setMinUpdateIntervalMillis(3_000L).build()
+
+    private val saverRequest = LocationRequest.Builder(
+        Priority.PRIORITY_BALANCED_POWER_ACCURACY, SAVER_INTERVAL
+    ).setMinUpdateIntervalMillis(10_000L).build()
+
+    /** Mode the running location request was started with; null while GPS is off. */
+    private var gpsSaverActive: Boolean? = null
 
     @SuppressLint("MissingPermission")
     private val locationCallback = object : LocationCallback() {
@@ -292,14 +305,29 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     private fun startGps() {
         if (gpsRunning) return
         gpsRunning = true
+        val saver = prefs.batterySaver
+        gpsSaverActive = saver
         fusedLocation.requestLocationUpdates(
-            locationRequest, locationCallback, Looper.getMainLooper()
+            if (saver) saverRequest else normalRequest, locationCallback, Looper.getMainLooper()
         )
+        log(if (saver) "GPS: Akku-Modus (alle ${SAVER_INTERVAL / 1000} s, ausgeglichen)"
+            else "GPS: Normal (alle ${NORMAL_INTERVAL / 1000} s, hohe Genauigkeit)")
     }
 
     private fun stopGps() {
         gpsRunning = false
+        gpsSaverActive = null
         fusedLocation.removeLocationUpdates(locationCallback)
+    }
+
+    /**
+     * Re-reads [CameraPrefs.batterySaver] and restarts the location request if the
+     * mode changed, so toggling the switch applies to the running session.
+     */
+    fun applyGpsMode() {
+        if (!gpsRunning || gpsSaverActive == prefs.batterySaver) return
+        stopGps()
+        startGps()
     }
 
     // ── GPX track ─────────────────────────────────────────────────────────────

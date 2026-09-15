@@ -150,6 +150,15 @@
             android:textSize="13sp"
             android:paddingVertical="4dp"/>
 
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swBatterySaver"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Akku sparen (GPS alle 20 s statt 5 s, geringere Genauigkeit)"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:paddingVertical="4dp"/>
+
         <Button
             android:id="@+id/btnTracks"
             style="@style/Widget.MaterialComponents.Button.TextButton"
