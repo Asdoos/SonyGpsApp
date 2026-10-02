@@ -12,6 +12,14 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+### Behoben
+- **Erster Verbindungsversuch hing:** Beim Verbinden blieb die App oft bei
+  „Verbinde…“ stehen, erst Abbrechen und erneutes Verbinden half. Hängt der
+  Aufbau jetzt (keine Antwort der Kamera innerhalb von 20 Sekunden, oder ein
+  Fehler im Protokoll-Handshake direkt nach dem Koppeln), baut die App die
+  Verbindung selbst ab und versucht es nach wenigen Sekunden erneut. Die
+  Statuskarte zeigt währenddessen weiter „Verbinde…“ statt „Getrennt“.
+
 ## [0.10.0] - 2026-09-15
 
 ### Geändert

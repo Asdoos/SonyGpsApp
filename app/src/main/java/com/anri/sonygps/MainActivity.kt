@@ -328,7 +328,9 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
 
     override fun onServiceDisconnected() {
         clearPosition()
-        phase = Phase.ENDED
+        // While the session is active the service retries on its own; render()
+        // switches to ENDED once the session is over.
+        phase = if (GpsForegroundService.sessionActive) Phase.CONNECTING else Phase.ENDED
         log(getString(R.string.log_disconnected))
         render()
     }

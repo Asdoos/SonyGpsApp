@@ -50,6 +50,15 @@ import java.util.concurrent.TimeUnit
  *   9. Every 9 s             → write APO-avoidance command to CC02
  *  10. sendLocation()        → build 91/95-byte packet → Write → DD11
  *  11. stopTransfer()        → cancel keepalive, Write {0x00} → DD31 → DD30
+ *
+ * ── Robustness ──────────────────────────────────────────────────────────────
+ *   GATT callbacks arrive on a binder thread; they are handed to the main thread
+ *   so the op-queue is only touched from one thread. A first connection attempt
+ *   can stall without any callback (connectGatt never completes, discovery or a
+ *   handshake write fails while the bonded link is still being encrypted). Every
+ *   such case ends the link via [dropLink] → Listener.onDisconnected(), so the
+ *   service retries on its own instead of the user having to cancel and connect
+ *   again. A watchdog does the same if the handshake isn't done in time.
  */
 @SuppressLint("MissingPermission")
 class SonyCameraGatt(
@@ -108,6 +117,19 @@ class SonyCameraGatt(
 
         private const val MAX_LOCATION_AGE_SEC = 10L
         private const val MAX_GPS_FAIL_COUNT    = 3
+
+        /** connect() → onReady() must finish within this, otherwise the link is dropped and retried. */
+        private const val SETUP_TIMEOUT_MS = 20_000L
+
+        /**
+         * Bonded camera: wait before service discovery so the stack can finish link
+         * encryption first. Discovering right away can fail or return an incomplete
+         * service list, after which the handshake stalled.
+         */
+        private const val DISCOVERY_DELAY_BONDED_MS = 600L
+
+        /** disconnect() → STATE_DISCONNECTED normally takes well under a second. */
+        private const val DISCONNECT_CONFIRM_MS = 3_000L
     }
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -116,8 +138,13 @@ class SonyCameraGatt(
     private var timezoneSupport   = false
     private var isLocationEnabled = false
     private var gpsWriteFailCount = 0
+    /** True between STATE_CONNECTED and the end of the link. */
+    private var linkUp     = false
+    /** Set once the link has ended, so onDisconnected() is reported exactly once. */
+    private var linkClosed = false
 
-    // Serialised op-queue — BLE only allows one operation at a time
+    // Serialised op-queue — BLE only allows one operation at a time.
+    // Only touched on the main thread (GATT callbacks are posted there).
     private val opQueue   = ArrayDeque<() -> Unit>()
     private var opPending = false
 
@@ -126,11 +153,26 @@ class SonyCameraGatt(
     // APO keepalive runnable — rescheduled after every successful write
     private val apoRunnable: Runnable = Runnable { sendApoAvoidance() }
 
+    /** Watchdog for connect + handshake; waits longer while Android shows a pairing request. */
+    private val setupTimeout: Runnable = object : Runnable {
+        override fun run() {
+            if (isLocationEnabled || linkClosed) return
+            if (device.bondState == BluetoothDevice.BOND_BONDING) {
+                log("Pairing in progress — waiting")
+                mainHandler.postDelayed(this, SETUP_TIMEOUT_MS)
+                return
+            }
+            fail(if (linkUp) "Handshake timed out" else "Connection attempt timed out")
+        }
+    }
+
     // ── Public API ───────────────────────────────────────────────────────────
 
     fun connect() {
         log("Connecting to ${device.address} (${device.name ?: "?"})")
+        mainHandler.postDelayed(setupTimeout, SETUP_TIMEOUT_MS)
         gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        if (gatt == null) fail("connectGatt() returned null")
     }
 
     fun sendLocation(location: Location) {
@@ -156,14 +198,53 @@ class SonyCameraGatt(
         enqueue { writeChar(CHAR_LOCATION_ENABLE, LOC_OFF) }
     }
 
-    fun disconnect() { gatt?.disconnect() }
+    /**
+     * Ends the link. While a connection attempt is still pending Android reports
+     * no disconnect, so the link is dropped right away in that case; otherwise
+     * after [DISCONNECT_CONFIRM_MS] if the stack never confirms it.
+     */
+    fun disconnect() {
+        if (!linkUp) { dropLink(); return }
+        gatt?.disconnect()
+        mainHandler.postDelayed({ dropLink() }, DISCONNECT_CONFIRM_MS)
+    }
 
     fun close() {
         stopKeepalive()
+        // Also drops GATT callbacks still queued for this (now dead) connection
+        mainHandler.removeCallbacksAndMessages(null)
         gatt?.close()
         gatt = null
+        linkUp = false
         opQueue.clear()
         opPending = false
+    }
+
+    // ── Link end ─────────────────────────────────────────────────────────────
+
+    /** Handshake or connection failed: end the link so the service reconnects. */
+    private fun fail(msg: String) {
+        error("$msg — dropping link")
+        dropLink()
+    }
+
+    /**
+     * Closes the GATT client and reports onDisconnected() once. The report is
+     * posted so that a close() right after (service shutdown) suppresses it.
+     */
+    private fun dropLink() {
+        if (linkClosed) return
+        linkClosed        = true
+        linkUp            = false
+        isLocationEnabled = false
+        stopKeepalive()
+        mainHandler.removeCallbacks(setupTimeout)
+        opQueue.clear()
+        opPending = false
+        gatt?.disconnect()
+        gatt?.close()
+        gatt = null
+        mainHandler.post { listener.onDisconnected() }
     }
 
     // ── APO keepalive ────────────────────────────────────────────────────────
@@ -218,7 +299,7 @@ class SonyCameraGatt(
         if (c == null) { error("GPS char $prefix not found"); opDone(); return }
         c.value     = value
         c.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        gatt?.writeCharacteristic(c) ?: run { error("GATT null"); opDone() }
+        if (gatt?.writeCharacteristic(c) != true) { error("Write $prefix not started"); opDone() }
     }
 
     /** Write to a characteristic in the control service (CC00). */
@@ -230,16 +311,19 @@ class SonyCameraGatt(
         if (c == null) { error("Ctrl char $prefix not found"); opDone(); return }
         c.value     = value
         c.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        gatt?.writeCharacteristic(c) ?: run { error("GATT null"); opDone() }
+        if (gatt?.writeCharacteristic(c) != true) { error("Write $prefix not started"); opDone() }
     }
 
-    private fun readChar(prefix: String) {
+    /** Handshake read; [onMissing] continues the handshake if the read can't be started. */
+    private fun readChar(prefix: String, onMissing: () -> Unit) {
         val svc = gatt?.getService(GPS_SERVICE_UUID)
         val c   = svc?.characteristics?.firstOrNull {
             it.uuid.toString().uppercase().startsWith(prefix)
         }
-        if (c == null) { error("GPS char $prefix not found"); opDone(); return }
-        gatt?.readCharacteristic(c) ?: run { error("GATT null"); opDone() }
+        if (c == null || gatt?.readCharacteristic(c) != true) {
+            log("Read $prefix not possible — skipped")
+            opDone(); onMissing(); return
+        }
     }
 
     private fun enableNotify(prefix: String) {
@@ -247,42 +331,65 @@ class SonyCameraGatt(
         val c   = svc?.characteristics?.firstOrNull {
             it.uuid.toString().uppercase().startsWith(prefix)
         }
-        if (c == null) { error("GPS char $prefix not found"); opDone(); return }
+        if (c == null) { fail("GPS char $prefix not found"); return }
         gatt?.setCharacteristicNotification(c, true)
         val d = c.getDescriptor(CCCD_UUID)
-        if (d == null) { error("CCCD not found on $prefix"); opDone(); return }
+        if (d == null) { fail("CCCD not found on $prefix"); return }
         d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-        gatt?.writeDescriptor(d) ?: run { error("GATT null"); opDone() }
+        if (gatt?.writeDescriptor(d) != true) fail("CCCD write not started")
+    }
+
+    // ── Handshake steps ──────────────────────────────────────────────────────
+
+    private fun readTimeCorrection() = enqueue { readChar(CHAR_TIME_CORRECTION) { readAreaAdjustment() } }
+    private fun readAreaAdjustment() = enqueue { readChar(CHAR_AREA_ADJUSTMENT) { readCapability() } }
+    private fun readCapability()     = enqueue { readChar(CHAR_CAPABILITY) { onHandshakeDone(null) } }
+
+    /** Last handshake step: [cap] is the DD21 value (null if it couldn't be read). */
+    private fun onHandshakeDone(cap: ByteArray?) {
+        timezoneSupport = cap != null && cap.size >= 5 && (cap[4].toInt() and 0x02) != 0
+        log("Timezone support: $timezoneSupport")
+        isLocationEnabled = true
+        mainHandler.removeCallbacks(setupTimeout)
+        // Start keepalive timer now that the session is fully active
+        startKeepalive()
+        listener.onReady()
     }
 
     // ── GATT Callback ────────────────────────────────────────────────────────
 
+    /**
+     * Runs [block] on the main thread, unless the callback belongs to a GATT
+     * client that has been closed or replaced in the meantime.
+     */
+    private fun onMain(g: BluetoothGatt, block: () -> Unit) {
+        mainHandler.post { if (g === gatt && !linkClosed) block() }
+    }
+
     private val gattCallback = object : BluetoothGattCallback() {
 
-        override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
-            when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> {
-                    log("GATT connected — discovering services…")
-                    mainHandler.post { listener.onConnected() }
-                    g.discoverServices()
-                }
-                BluetoothProfile.STATE_DISCONNECTED -> {
-                    log("GATT disconnected (status=$status)")
-                    isLocationEnabled = false
-                    stopKeepalive()
-                    opQueue.clear()
-                    opPending = false
-                    mainHandler.post { listener.onDisconnected() }
-                }
+        override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) = onMain(g) {
+            if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
+                linkUp = true
+                log("GATT connected — discovering services…")
+                listener.onConnected()
+                val bonded = device.bondState == BluetoothDevice.BOND_BONDED
+                mainHandler.postDelayed({
+                    if (gatt === g && !linkClosed && !g.discoverServices()) fail("Service discovery not started")
+                }, if (bonded) DISCOVERY_DELAY_BONDED_MS else 0L)
+            } else {
+                // Includes a failed connect (e.g. status 133) — the service retries
+                log("GATT disconnected (status=$status, state=$newState)")
+                dropLink()
             }
         }
 
-        override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+        override fun onServicesDiscovered(g: BluetoothGatt, status: Int) = onMain(g) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                error("Service discovery failed: $status"); return
+                fail("Service discovery failed: $status"); return@onMain
             }
             if (g.getService(GPS_SERVICE_UUID) == null) {
-                error("Sony GPS service not found — unsupported camera?"); return
+                fail("Sony GPS service not found — unsupported camera?"); return@onMain
             }
             log("Services discovered. Starting GPS protocol…")
             enqueue { enableNotify(CHAR_NOTIFY_DISABLE) }
@@ -290,9 +397,10 @@ class SonyCameraGatt(
 
         override fun onDescriptorWrite(
             g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int
-        ) {
+        ) = onMain(g) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                error("Descriptor write failed: $status"); opDone(); return
+                // Typically insufficient authentication while the link is still being encrypted
+                fail("Descriptor write failed: $status"); return@onMain
             }
             log("CCCD subscribed")
             opDone()
@@ -305,69 +413,8 @@ class SonyCameraGatt(
             status: Int
         ) {
             val prefix = characteristic.uuid.toString().uppercase().take(8)
-            val value  = characteristic.value
-            log("Write [$prefix] status=$status")
-
-            when {
-                // ── CC02 APO keepalive ack ──────────────────────────────────
-                prefix.startsWith(CHAR_CAMERA_CTRL) -> {
-                    if (status != BluetoothGatt.GATT_SUCCESS)
-                        log("APO write failed (status=$status) — will retry next interval")
-                    opDone()
-                    // Reschedule next keepalive
-                    if (isLocationEnabled) {
-                        mainHandler.removeCallbacks(apoRunnable)
-                        mainHandler.postDelayed(apoRunnable, APO_INTERVAL_MS)
-                    }
-                }
-
-                // ── DD30 Lock acquired ──────────────────────────────────────
-                prefix.startsWith(CHAR_LOCK) && value.contentEquals(LOCK_ON) -> {
-                    if (status != BluetoothGatt.GATT_SUCCESS) {
-                        error("Failed to acquire lock ($status)"); opDone(); return
-                    }
-                    opDone()
-                    enqueue { writeChar(CHAR_LOCATION_ENABLE, LOC_ON) }
-                }
-
-                // ── DD31 Location enabled ───────────────────────────────────
-                prefix.startsWith(CHAR_LOCATION_ENABLE) && value.contentEquals(LOC_ON) -> {
-                    if (status != BluetoothGatt.GATT_SUCCESS) {
-                        error("Failed to enable location ($status)"); opDone(); return
-                    }
-                    opDone()
-                    enqueue { readChar(CHAR_TIME_CORRECTION) }
-                }
-
-                // ── DD31 Location disabled (stop path) ──────────────────────
-                prefix.startsWith(CHAR_LOCATION_ENABLE) && value.contentEquals(LOC_OFF) -> {
-                    opDone()
-                    enqueue { writeChar(CHAR_LOCK, LOCK_OFF) }
-                }
-
-                // ── DD30 Lock released (stop path) ──────────────────────────
-                prefix.startsWith(CHAR_LOCK) && value.contentEquals(LOCK_OFF) -> {
-                    log("Lock released — transfer fully stopped")
-                    opDone()
-                }
-
-                // ── DD11 GPS data ────────────────────────────────────────────
-                prefix.startsWith(CHAR_GPS_DATA) -> {
-                    if (status == BluetoothGatt.GATT_SUCCESS) {
-                        gpsWriteFailCount = 0
-                    } else {
-                        gpsWriteFailCount++
-                        log("GPS write failed (fail #$gpsWriteFailCount)")
-                        if (gpsWriteFailCount >= MAX_GPS_FAIL_COUNT) {
-                            error("GPS write failed $MAX_GPS_FAIL_COUNT× — aborting")
-                            opDone(); stopTransfer(); return
-                        }
-                    }
-                    opDone()
-                }
-
-                else -> opDone()
-            }
+            val value  = characteristic.value?.copyOf()
+            onMain(g) { handleWrite(prefix, value, status) }
         }
 
         override fun onCharacteristicRead(
@@ -376,31 +423,8 @@ class SonyCameraGatt(
             status: Int
         ) {
             val prefix = characteristic.uuid.toString().uppercase().take(8)
-            log("Read  [$prefix] status=$status")
-
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                error("Read failed: $prefix ($status)"); opDone(); return
-            }
-
-            when {
-                prefix.startsWith(CHAR_TIME_CORRECTION) -> {
-                    opDone(); enqueue { readChar(CHAR_AREA_ADJUSTMENT) }
-                }
-                prefix.startsWith(CHAR_AREA_ADJUSTMENT) -> {
-                    opDone(); enqueue { readChar(CHAR_CAPABILITY) }
-                }
-                prefix.startsWith(CHAR_CAPABILITY) -> {
-                    val cap = characteristic.value
-                    timezoneSupport = cap != null && cap.size >= 5 && (cap[4].toInt() and 0x02) != 0
-                    log("Timezone support: $timezoneSupport")
-                    isLocationEnabled = true
-                    opDone()
-                    // Start keepalive timer now that the session is fully active
-                    startKeepalive()
-                    mainHandler.post { listener.onReady() }
-                }
-                else -> opDone()
-            }
+            val value  = characteristic.value?.copyOf()
+            onMain(g) { handleRead(prefix, value, status) }
         }
 
         override fun onCharacteristicChanged(
@@ -408,27 +432,107 @@ class SonyCameraGatt(
             characteristic: BluetoothGattCharacteristic
         ) {
             val prefix = characteristic.uuid.toString().uppercase().take(8)
-            if (prefix.startsWith(CHAR_NOTIFY_DISABLE)) {
+            val value  = characteristic.value?.copyOf()
+            onMain(g) {
                 // LOCATION_TRANSFER_DISABLE = {3, 1, 2, 0}
-                if (characteristic.value?.contentEquals(byteArrayOf(3, 1, 2, 0)) == true) {
+                if (prefix.startsWith(CHAR_NOTIFY_DISABLE) &&
+                    value?.contentEquals(byteArrayOf(3, 1, 2, 0)) == true) {
                     log("Camera remotely disabled location transfer")
-                    isLocationEnabled = false
-                    stopKeepalive()
-                    mainHandler.post { listener.onDisconnected() }
+                    dropLink()
                 }
             }
         }
     }
 
+    private fun handleWrite(prefix: String, value: ByteArray?, status: Int) {
+        log("Write [$prefix] status=$status")
+
+        when {
+            // ── CC02 APO keepalive ack ──────────────────────────────────────
+            prefix.startsWith(CHAR_CAMERA_CTRL) -> {
+                if (status != BluetoothGatt.GATT_SUCCESS)
+                    log("APO write failed (status=$status) — will retry next interval")
+                opDone()
+                // Reschedule next keepalive
+                if (isLocationEnabled) {
+                    mainHandler.removeCallbacks(apoRunnable)
+                    mainHandler.postDelayed(apoRunnable, APO_INTERVAL_MS)
+                }
+            }
+
+            // ── DD30 Lock acquired ──────────────────────────────────────────
+            prefix.startsWith(CHAR_LOCK) && value.contentEquals(LOCK_ON) -> {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    fail("Failed to acquire lock ($status)"); return
+                }
+                opDone()
+                enqueue { writeChar(CHAR_LOCATION_ENABLE, LOC_ON) }
+            }
+
+            // ── DD31 Location enabled ───────────────────────────────────────
+            prefix.startsWith(CHAR_LOCATION_ENABLE) && value.contentEquals(LOC_ON) -> {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    fail("Failed to enable location ($status)"); return
+                }
+                opDone()
+                readTimeCorrection()
+            }
+
+            // ── DD31 Location disabled (stop path) ──────────────────────────
+            prefix.startsWith(CHAR_LOCATION_ENABLE) && value.contentEquals(LOC_OFF) -> {
+                opDone()
+                enqueue { writeChar(CHAR_LOCK, LOCK_OFF) }
+            }
+
+            // ── DD30 Lock released (stop path) ──────────────────────────────
+            prefix.startsWith(CHAR_LOCK) && value.contentEquals(LOCK_OFF) -> {
+                log("Lock released — transfer fully stopped")
+                opDone()
+            }
+
+            // ── DD11 GPS data ────────────────────────────────────────────────
+            prefix.startsWith(CHAR_GPS_DATA) -> {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    gpsWriteFailCount = 0
+                } else {
+                    gpsWriteFailCount++
+                    log("GPS write failed (fail #$gpsWriteFailCount)")
+                    if (gpsWriteFailCount >= MAX_GPS_FAIL_COUNT) {
+                        error("GPS write failed $MAX_GPS_FAIL_COUNT× — aborting")
+                        opDone(); stopTransfer(); return
+                    }
+                }
+                opDone()
+            }
+
+            else -> opDone()
+        }
+    }
+
+    /** DD32/DD33 are informational and DD21 has a safe default, so a failed read doesn't stop the handshake. */
+    private fun handleRead(prefix: String, value: ByteArray?, status: Int) {
+        log("Read  [$prefix] status=$status")
+        val ok = status == BluetoothGatt.GATT_SUCCESS
+        if (!ok) log("Read failed: $prefix ($status) — continuing")
+        opDone()
+
+        when {
+            prefix.startsWith(CHAR_TIME_CORRECTION) -> readAreaAdjustment()
+            prefix.startsWith(CHAR_AREA_ADJUSTMENT) -> readCapability()
+            prefix.startsWith(CHAR_CAPABILITY)      -> onHandshakeDone(if (ok) value else null)
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    /** Always called on the main thread. */
     private fun error(msg: String) {
         Log.e(TAG, msg)
-        mainHandler.post { listener.onError(msg) }
+        listener.onError(msg)
     }
 
     private fun log(msg: String) {
         Log.d(TAG, msg)
-        mainHandler.post { listener.onLog(msg) }
+        listener.onLog(msg)
     }
 }
