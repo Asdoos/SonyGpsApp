@@ -12,6 +12,8 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-09
+
 ### Neu
 - **Kamera-Akku auf dem Hauptbildschirm:** Solange die Verbindung steht, zeigt
   die Statuskarte den Akkustand der Kamera in Prozent — und ob sie gerade über
@@ -170,7 +172,8 @@ Regeln für Einträge:
 - Erste Version: BLE-Suche nach Sony-Kameras, GPS-Übertragung alle 5 s,
   APO-Keepalive, automatischer Reconnect, Foreground-Service.
 
-[Unreleased]: https://github.com/Asdoos/SonyGpsApp/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/Asdoos/SonyGpsApp/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Asdoos/SonyGpsApp/compare/v0.7.0...v0.8.0
