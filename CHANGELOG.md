@@ -16,6 +16,8 @@ Regeln für Einträge:
 - **Kamera-Akku auf dem Hauptbildschirm:** Solange die Verbindung steht, zeigt
   die Statuskarte den Akkustand der Kamera in Prozent — und ob sie gerade über
   USB mit Strom versorgt wird. Kameras, die den Wert nicht melden, zeigen nichts an.
+- **Freie Aufnahmen auf der Speicherkarte:** Direkt darunter steht, für wie viele
+  Fotos auf der Karte noch Platz ist — oder dass keine Karte eingelegt ist.
 
 ### Geändert
 - **Klarere Fehlermeldung beim Verbinden:** Lehnt die Kamera die Standortkopplung

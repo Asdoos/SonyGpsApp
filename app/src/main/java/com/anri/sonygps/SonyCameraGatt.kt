@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
  * Service (camera control / APO avoidance):
  *   8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF
  *   Characteristic 0000CC02  WRITE  — generic camera control commands
+ *   Characteristic 0000CC0F  READ+NOTIFY — memory card (see CameraMedia)
  *   Characteristic 0000CC10  READ+NOTIFY — camera battery (see CameraBattery)
  *
  * Service (GPS / Location data):
@@ -71,6 +72,7 @@ class SonyCameraGatt(
         fun onReady()
         fun onDisconnected()
         fun onBattery(battery: CameraBattery)
+        fun onMedia(media: CameraMedia)
         fun onError(msg: String)
         fun onLog(msg: String)
     }
@@ -83,7 +85,10 @@ class SonyCameraGatt(
         // Camera control service (APO avoidance)
         private val CTRL_SERVICE_UUID: UUID = UUID.fromString("8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF")
         private const val CHAR_CAMERA_CTRL    = "0000CC02"
+        private const val CHAR_MEDIA          = "0000CC0F"
         private const val CHAR_BATTERY        = "0000CC10"
+        /** Optional status characteristics: read once, then kept current by notifications. */
+        private val CAMERA_INFO_CHARS = listOf(CHAR_BATTERY, CHAR_MEDIA)
 
         // GPS service
         val GPS_SERVICE_UUID: UUID = UUID.fromString("8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF")
@@ -450,9 +455,9 @@ class SonyCameraGatt(
         }
 
         private fun handleDescriptorWrite(prefix: String, status: Int) {
-            if (prefix.startsWith(CHAR_BATTERY)) {
+            if (isCameraInfo(prefix)) {
                 // Optional extra — never a reason to drop the link
-                if (status != BluetoothGatt.GATT_SUCCESS) log("Battery notifications not available ($status)")
+                if (status != BluetoothGatt.GATT_SUCCESS) log("Notifications for $prefix not available ($status)")
                 opDone()
                 return
             }
@@ -492,7 +497,7 @@ class SonyCameraGatt(
             val prefix = characteristic.uuid.toString().uppercase().take(8)
             val value  = characteristic.value?.clone()
             onMain(g) {
-                if (prefix.startsWith(CHAR_BATTERY)) { handleBattery(value); return@onMain }
+                if (isCameraInfo(prefix)) { handleCameraInfo(prefix, value); return@onMain }
                 // LOCATION_TRANSFER_DISABLE = {3, 1, 2, 0}
                 if (prefix.startsWith(CHAR_NOTIFY_DISABLE) &&
                     value?.contentEquals(byteArrayOf(3, 1, 2, 0)) == true
@@ -573,30 +578,42 @@ class SonyCameraGatt(
         }
     }
 
+    private fun isCameraInfo(prefix: String) = CAMERA_INFO_CHARS.any { prefix.startsWith(it) }
+
     /**
-     * Subscribes to the camera battery level and reads it once. Purely optional:
-     * cameras without CC10 are skipped and a failure never ends the session.
+     * Subscribes to battery and memory card state and reads each once. Purely
+     * optional: characteristics a camera lacks are skipped and a failure never
+     * ends the session.
      */
-    private fun requestBattery() {
-        if (findChar(CTRL_SERVICE_UUID, CHAR_BATTERY) == null) {
-            log("Camera does not report its battery level"); return
+    private fun requestCameraInfo() {
+        for (char in CAMERA_INFO_CHARS) {
+            if (findChar(CTRL_SERVICE_UUID, char) == null) {
+                log("Camera does not offer $char"); continue
+            }
+            enqueue(Op("$char subscribe", onStartFailed = {}) { enableNotify(CTRL_SERVICE_UUID, char) })
+            enqueue(Op("$char read", onStartFailed = {}) { readChar(CTRL_SERVICE_UUID, char) })
         }
-        enqueue(Op("Battery subscribe", onStartFailed = {}) { enableNotify(CTRL_SERVICE_UUID, CHAR_BATTERY) })
-        enqueue(Op("Battery read", onStartFailed = {}) { readChar(CTRL_SERVICE_UUID, CHAR_BATTERY) })
     }
 
-    private fun handleBattery(value: ByteArray?) {
+    private fun handleCameraInfo(prefix: String, value: ByteArray?) {
         if (value == null) return
-        val battery = CameraBattery.parse(value)
-        log("Battery [" + value.joinToString(" ") { "%02X".format(it) } + "] → " + (battery ?: "not readable"))
-        if (battery != null) listener.onBattery(battery)
+        val hex = value.joinToString(" ") { "%02X".format(it) }
+        if (prefix.startsWith(CHAR_BATTERY)) {
+            val battery = CameraBattery.parse(value)
+            log("Battery [$hex] → " + (battery ?: "not readable"))
+            if (battery != null) listener.onBattery(battery)
+        } else {
+            val media = CameraMedia.parse(value)
+            log("Media [$hex] → " + (media ?: "not readable"))
+            if (media != null) listener.onMedia(media)
+        }
     }
 
     private fun handleRead(prefix: String, value: ByteArray?, status: Int) {
         log("Read  [$prefix] status=$status")
 
-        if (prefix.startsWith(CHAR_BATTERY)) {
-            if (status == BluetoothGatt.GATT_SUCCESS) handleBattery(value)
+        if (isCameraInfo(prefix)) {
+            if (status == BluetoothGatt.GATT_SUCCESS) handleCameraInfo(prefix, value)
             opDone()
             return
         }
@@ -621,7 +638,7 @@ class SonyCameraGatt(
                 // Start keepalive timer now that the session is fully active
                 startKeepalive()
                 listener.onReady()
-                requestBattery()
+                requestCameraInfo()
             }
             else -> opDone()
         }

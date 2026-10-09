@@ -342,7 +342,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         render()
     }
 
-    override fun onServiceBattery(battery: CameraBattery?) = render()
+    override fun onServiceCameraInfo() = render()
 
     override fun onServiceGpsUpdate(lat: Double, lon: Double, accuracy: Float, speedKmh: Int) {
         binding.tvAccuracy.text = getString(R.string.accuracy_fmt, accuracy)
@@ -434,6 +434,17 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
             binding.tvCameraBattery.visibility = View.VISIBLE
         } else {
             binding.tvCameraBattery.visibility = View.GONE
+        }
+
+        // ── Memory card ──
+        val media = gpsService?.cameraMedia
+        if (phase == Phase.ACTIVE && media != null) {
+            binding.tvCameraMedia.text =
+                if (media.hasCard) resources.getQuantityString(R.plurals.camera_media_shots, media.remainingShots, media.remainingShots)
+                else getString(R.string.camera_media_no_card)
+            binding.tvCameraMedia.visibility = View.VISIBLE
+        } else {
+            binding.tvCameraMedia.visibility = View.GONE
         }
 
         // ── Buttons ──

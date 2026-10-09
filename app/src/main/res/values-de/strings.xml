@@ -12,6 +12,11 @@
     <string name="hint_lost">Verbinde dich erneut, sobald du bereit bist.</string>
     <string name="camera_battery_fmt">Kamera-Akku %1$d %%</string>
     <string name="camera_battery_usb_fmt">Kamera-Akku %1$d %% · USB-Strom</string>
+    <string name="camera_media_no_card">Keine Speicherkarte</string>
+    <plurals name="camera_media_shots">
+        <item quantity="one">Platz für %1$d Aufnahme</item>
+        <item quantity="other">Platz für %1$d Aufnahmen</item>
+    </plurals>
     <string name="hint_reconnecting_fmt">%s wird erneut gesucht. Prüfe, ob die Kamera eingeschaltet und in der Nähe ist.</string>
     <string name="hint_scan_failed_fmt">Prüfe, ob Bluetooth eingeschaltet ist, und versuche es erneut. (Code %d)</string>
     <string name="status_scan_failed">Suche fehlgeschlagen</string>

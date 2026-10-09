@@ -115,6 +115,21 @@
                     tools:text="Camera battery 82 %"
                     tools:visibility="visible"/>
 
+                <TextView
+                    android:id="@+id/tvCameraMedia"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:drawablePadding="6dp"
+                    android:gravity="center_vertical"
+                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:visibility="gone"
+                    app:drawableStartCompat="@drawable/ic_sd_card"
+                    app:drawableTint="?attr/colorOnSurfaceVariant"
+                    tools:text="Room for 1234 shots"
+                    tools:visibility="visible"/>
+
                 <com.google.android.material.progressindicator.LinearProgressIndicator
                     android:id="@+id/progress"
                     android:layout_width="match_parent"

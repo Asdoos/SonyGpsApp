@@ -72,7 +72,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         fun onServiceDisconnected()
         fun onServiceLog(msg: String)
         fun onServiceGpsUpdate(lat: Double, lon: Double, accuracy: Float, speedKmh: Int)
-        fun onServiceBattery(battery: CameraBattery?)
+        fun onServiceCameraInfo()
     }
 
     var statusListener: StatusListener? = null
@@ -91,6 +91,9 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         private set
     /** Last battery level the camera reported in this link; null when unknown. */
     var cameraBattery: CameraBattery? = null
+        private set
+    /** Last memory card state the camera reported in this link; null when unknown. */
+    var cameraMedia: CameraMedia? = null
         private set
 
     private var userStopped      = false
@@ -346,6 +349,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     override fun onDisconnected() {
         isConnected = false
         cameraBattery = null
+        cameraMedia = null
         isReady     = false
         readyForGps = false
         SessionTileService.requestUpdate(this)
@@ -366,7 +370,12 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
 
     override fun onBattery(battery: CameraBattery) {
         cameraBattery = battery
-        statusListener?.onServiceBattery(battery)
+        statusListener?.onServiceCameraInfo()
+    }
+
+    override fun onMedia(media: CameraMedia) {
+        cameraMedia = media
+        statusListener?.onServiceCameraInfo()
     }
 
     override fun onError(msg: String) = log(getString(R.string.log_error_fmt, msg))
