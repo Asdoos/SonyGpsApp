@@ -12,6 +12,11 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+### Neu
+- **Kamera-Akku auf dem Hauptbildschirm:** Solange die Verbindung steht, zeigt
+  die Statuskarte den Akkustand der Kamera in Prozent — und ob sie gerade über
+  USB mit Strom versorgt wird. Kameras, die den Wert nicht melden, zeigen nichts an.
+
 ### Geändert
 - **Klarere Fehlermeldung beim Verbinden:** Lehnt die Kamera die Standortkopplung
   ab, steht im Protokoll jetzt, warum — Standortkopplung im Kameramenü aus oder

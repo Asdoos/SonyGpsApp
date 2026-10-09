@@ -74,6 +74,7 @@ UUID: 8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF
 | Characteristic (Prefix) | Type | Content |
 |---|---|---|
 | `0000CC02` | WRITE | Generic camera control commands (incl. APO avoidance) |
+| `0000CC10` | READ + NOTIFY | Camera battery: byte 3 = `2` when readable, bytes 10–13 = charge in percent (big-endian), byte 18 = `2` when powered via USB. Layout documented in `CameraBattery.kt` |
 
 #### Service 2 — GPS / Location (`DD00`)
 ```

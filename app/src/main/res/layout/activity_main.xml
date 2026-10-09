@@ -100,6 +100,21 @@
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:text="@string/hint_no_camera"/>
 
+                <TextView
+                    android:id="@+id/tvCameraBattery"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:drawablePadding="6dp"
+                    android:gravity="center_vertical"
+                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:visibility="gone"
+                    app:drawableStartCompat="@drawable/ic_battery"
+                    app:drawableTint="?attr/colorOnSurfaceVariant"
+                    tools:text="Camera battery 82 %"
+                    tools:visibility="visible"/>
+
                 <com.google.android.material.progressindicator.LinearProgressIndicator
                     android:id="@+id/progress"
                     android:layout_width="match_parent"

@@ -13,6 +13,8 @@
     <string name="hint_connecting">This usually takes just a few seconds.</string>
     <string name="hint_active_fmt">%s is receiving your position. You can close the app now.</string>
     <string name="hint_lost">Connect again whenever you are ready.</string>
+    <string name="camera_battery_fmt">Camera battery %1$d %%</string>
+    <string name="camera_battery_usb_fmt">Camera battery %1$d %% · USB power</string>
     <string name="hint_reconnecting_fmt">Trying to reach %s again. Check that the camera is on and nearby.</string>
     <string name="hint_scan_failed_fmt">Check that Bluetooth is on, then try again. (Code %d)</string>
     <string name="status_scan_failed">Search failed</string>

@@ -10,6 +10,8 @@
     <string name="hint_connecting">Das dauert meist nur wenige Sekunden.</string>
     <string name="hint_active_fmt">%s erhält deine Position. Du kannst die App jetzt schließen.</string>
     <string name="hint_lost">Verbinde dich erneut, sobald du bereit bist.</string>
+    <string name="camera_battery_fmt">Kamera-Akku %1$d %%</string>
+    <string name="camera_battery_usb_fmt">Kamera-Akku %1$d %% · USB-Strom</string>
     <string name="hint_reconnecting_fmt">%s wird erneut gesucht. Prüfe, ob die Kamera eingeschaltet und in der Nähe ist.</string>
     <string name="hint_scan_failed_fmt">Prüfe, ob Bluetooth eingeschaltet ist, und versuche es erneut. (Code %d)</string>
     <string name="status_scan_failed">Suche fehlgeschlagen</string>

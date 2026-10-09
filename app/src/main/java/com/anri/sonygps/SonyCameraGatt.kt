@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
  * Service (camera control / APO avoidance):
  *   8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF
  *   Characteristic 0000CC02  WRITE  — generic camera control commands
+ *   Characteristic 0000CC10  READ+NOTIFY — camera battery (see CameraBattery)
  *
  * Service (GPS / Location data):
  *   8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF
@@ -69,6 +70,7 @@ class SonyCameraGatt(
         fun onConnected()
         fun onReady()
         fun onDisconnected()
+        fun onBattery(battery: CameraBattery)
         fun onError(msg: String)
         fun onLog(msg: String)
     }
@@ -81,6 +83,7 @@ class SonyCameraGatt(
         // Camera control service (APO avoidance)
         private val CTRL_SERVICE_UUID: UUID = UUID.fromString("8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF")
         private const val CHAR_CAMERA_CTRL    = "0000CC02"
+        private const val CHAR_BATTERY        = "0000CC10"
 
         // GPS service
         val GPS_SERVICE_UUID: UUID = UUID.fromString("8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF")
@@ -368,14 +371,14 @@ class SonyCameraGatt(
         return gatt?.writeCharacteristic(c) == true
     }
 
-    private fun readChar(prefix: String): Boolean {
-        val c = findChar(GPS_SERVICE_UUID, prefix)
+    private fun readChar(serviceUuid: UUID, prefix: String): Boolean {
+        val c = findChar(serviceUuid, prefix)
         if (c == null) { log("Characteristic $prefix not found"); return false }
         return gatt?.readCharacteristic(c) == true
     }
 
-    private fun enableNotify(prefix: String): Boolean {
-        val c = findChar(GPS_SERVICE_UUID, prefix)
+    private fun enableNotify(serviceUuid: UUID, prefix: String): Boolean {
+        val c = findChar(serviceUuid, prefix)
         if (c == null) { log("Characteristic $prefix not found"); return false }
         gatt?.setCharacteristicNotification(c, true)
         val d = c.getDescriptor(CCCD_UUID)
@@ -436,14 +439,25 @@ class SonyCameraGatt(
                 fail("Sony GPS service not found — unsupported camera?"); return@onMain
             }
             log("Services discovered. Starting GPS protocol…")
-            enqueue(Op("Notification subscribe") { enableNotify(CHAR_NOTIFY_DISABLE) })
+            enqueue(Op("Notification subscribe") { enableNotify(GPS_SERVICE_UUID, CHAR_NOTIFY_DISABLE) })
         }
 
         override fun onDescriptorWrite(
             g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int
-        ) = onMain(g) {
+        ) {
+            val prefix = descriptor.characteristic.uuid.toString().uppercase().take(8)
+            onMain(g) { handleDescriptorWrite(prefix, status) }
+        }
+
+        private fun handleDescriptorWrite(prefix: String, status: Int) {
+            if (prefix.startsWith(CHAR_BATTERY)) {
+                // Optional extra — never a reason to drop the link
+                if (status != BluetoothGatt.GATT_SUCCESS) log("Battery notifications not available ($status)")
+                opDone()
+                return
+            }
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                fail("Descriptor write failed: $status"); return@onMain
+                fail("Descriptor write failed: $status"); return
             }
             log("CCCD subscribed")
             opDone()
@@ -478,6 +492,7 @@ class SonyCameraGatt(
             val prefix = characteristic.uuid.toString().uppercase().take(8)
             val value  = characteristic.value?.clone()
             onMain(g) {
+                if (prefix.startsWith(CHAR_BATTERY)) { handleBattery(value); return@onMain }
                 // LOCATION_TRANSFER_DISABLE = {3, 1, 2, 0}
                 if (prefix.startsWith(CHAR_NOTIFY_DISABLE) &&
                     value?.contentEquals(byteArrayOf(3, 1, 2, 0)) == true
@@ -530,7 +545,7 @@ class SonyCameraGatt(
             prefix.startsWith(CHAR_LOCATION_ENABLE) && value.contentEquals(LOC_ON) -> {
                 if (!ok) { fail("Failed to enable location ($status)"); return }
                 opDone()
-                enqueue(Op("Time-correction read") { readChar(CHAR_TIME_CORRECTION) })
+                enqueue(Op("Time-correction read") { readChar(GPS_SERVICE_UUID, CHAR_TIME_CORRECTION) })
             }
 
             // ── DD31 Location disabled (stop path) ──────────────────────
@@ -558,8 +573,33 @@ class SonyCameraGatt(
         }
     }
 
+    /**
+     * Subscribes to the camera battery level and reads it once. Purely optional:
+     * cameras without CC10 are skipped and a failure never ends the session.
+     */
+    private fun requestBattery() {
+        if (findChar(CTRL_SERVICE_UUID, CHAR_BATTERY) == null) {
+            log("Camera does not report its battery level"); return
+        }
+        enqueue(Op("Battery subscribe", onStartFailed = {}) { enableNotify(CTRL_SERVICE_UUID, CHAR_BATTERY) })
+        enqueue(Op("Battery read", onStartFailed = {}) { readChar(CTRL_SERVICE_UUID, CHAR_BATTERY) })
+    }
+
+    private fun handleBattery(value: ByteArray?) {
+        if (value == null) return
+        val battery = CameraBattery.parse(value)
+        log("Battery [" + value.joinToString(" ") { "%02X".format(it) } + "] → " + (battery ?: "not readable"))
+        if (battery != null) listener.onBattery(battery)
+    }
+
     private fun handleRead(prefix: String, value: ByteArray?, status: Int) {
         log("Read  [$prefix] status=$status")
+
+        if (prefix.startsWith(CHAR_BATTERY)) {
+            if (status == BluetoothGatt.GATT_SUCCESS) handleBattery(value)
+            opDone()
+            return
+        }
 
         if (status != BluetoothGatt.GATT_SUCCESS) {
             fail("Read failed: $prefix ($status)"); return
@@ -567,10 +607,10 @@ class SonyCameraGatt(
 
         when {
             prefix.startsWith(CHAR_TIME_CORRECTION) -> {
-                opDone(); enqueue(Op("Area-adjustment read") { readChar(CHAR_AREA_ADJUSTMENT) })
+                opDone(); enqueue(Op("Area-adjustment read") { readChar(GPS_SERVICE_UUID, CHAR_AREA_ADJUSTMENT) })
             }
             prefix.startsWith(CHAR_AREA_ADJUSTMENT) -> {
-                opDone(); enqueue(Op("Capability read") { readChar(CHAR_CAPABILITY) })
+                opDone(); enqueue(Op("Capability read") { readChar(GPS_SERVICE_UUID, CHAR_CAPABILITY) })
             }
             prefix.startsWith(CHAR_CAPABILITY) -> {
                 timezoneSupport = value != null && value.size >= 5 && (value[4].toInt() and 0x02) != 0
@@ -581,6 +621,7 @@ class SonyCameraGatt(
                 // Start keepalive timer now that the session is fully active
                 startKeepalive()
                 listener.onReady()
+                requestBattery()
             }
             else -> opDone()
         }

@@ -342,6 +342,8 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         render()
     }
 
+    override fun onServiceBattery(battery: CameraBattery?) = render()
+
     override fun onServiceGpsUpdate(lat: Double, lon: Double, accuracy: Float, speedKmh: Int) {
         binding.tvAccuracy.text = getString(R.string.accuracy_fmt, accuracy)
         binding.tvSpeed.text    = getString(R.string.speed_fmt, speedKmh)
@@ -421,6 +423,17 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
             Phase.SCAN_FAILED -> hero(
                 R.string.status_scan_failed, getString(R.string.hint_scan_failed_fmt, scanErrorCode),
                 R.drawable.ic_error, Tone.ERROR, busy = false)
+        }
+
+        // ── Camera battery ──
+        val battery = gpsService?.cameraBattery
+        if (phase == Phase.ACTIVE && battery != null) {
+            binding.tvCameraBattery.text = getString(
+                if (battery.externalPower) R.string.camera_battery_usb_fmt else R.string.camera_battery_fmt,
+                battery.percent)
+            binding.tvCameraBattery.visibility = View.VISIBLE
+        } else {
+            binding.tvCameraBattery.visibility = View.GONE
         }
 
         // ── Buttons ──
