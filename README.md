@@ -89,8 +89,8 @@ UUID: 8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF
 | `0000DD21` | READ   | Capability flags: byte[4] & `0x02` → timezone support |
 | `0000DD30` | WRITE  | Lock: `{0x01}` = acquire, `{0x00}` = release |
 | `0000DD31` | WRITE  | Location transfer: `{0x01}` = on, `{0x00}` = off |
-| `0000DD32` | READ   | Time correction setting (informational) |
-| `0000DD33` | READ   | Area adjustment setting (informational) |
+| `0000DD32` | READ + WRITE | Camera setting "auto time correction": `{0x01}` = the camera sets its clock from the GPS packets |
+| `0000DD33` | READ + WRITE | Camera setting "auto area adjustment": `{0x01}` = the camera sets its time zone from the GPS packets |
 
 > **Lookup method:** Characteristics are not resolved by their full 128-bit UUID but by **prefix-matching** the first 8 characters of the UUID string — exactly as in the original Sony app: `uuid.toString().uppercase().startsWith(prefix)`.
 

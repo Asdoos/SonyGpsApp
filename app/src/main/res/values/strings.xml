@@ -206,6 +206,8 @@
     <string name="interval_60s">Every 60 seconds</string>
 
     <string name="pref_cat_recording">Recording</string>
+    <string name="pref_sync_clock_title">Set camera clock from GPS</string>
+    <string name="pref_sync_clock_summary">The camera takes date, time and time zone from the phone. Same as “Auto Time Correction” and “Auto Area Adjustment” in the Sony app; applied the next time the camera is connected.</string>
     <string name="pref_record_track_title">Record GPS track (GPX)</string>
     <string name="pref_record_track_summary">Every position of a session is written to a GPX file — for geotagging photos later</string>
     <string name="pref_share_tracks_title">Share tracks</string>
@@ -262,6 +264,7 @@
     <string name="diag_none_saved">none saved</string>
     <string name="diag_language">App language</string>
     <string name="diag_auto_connect">Auto-connect</string>
+    <string name="diag_clock_sync">Camera clock from GPS</string>
     <string name="diag_battery_saver">Battery saver</string>
     <string name="diag_battery_saver_fmt">%1$s (fix every %2$d s)</string>
     <string name="diag_gpx">GPX recording</string>

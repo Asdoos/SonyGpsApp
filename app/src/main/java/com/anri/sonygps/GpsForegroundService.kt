@@ -97,6 +97,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         private set
 
     private var userStopped      = false
+    private var adoptingClockSync = false
     private var reconnectCount   = 0
     /** True between a lost link and the next successful handshake. */
     val isReconnecting get() = reconnectCount > 0
@@ -127,6 +128,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     /** Settings changed in SettingsActivity apply to the running session. */
     private val prefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == CameraPrefs.KEY_BATTERY_SAVER || key == CameraPrefs.KEY_SAVER_INTERVAL) applyGpsMode()
+        if (key == CameraPrefs.KEY_SYNC_CLOCK && !adoptingClockSync) cameraGatt?.clockSync = prefs.syncCameraClockChoice
     }
 
     companion object {
@@ -309,7 +311,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
         log(connecting)
         updateNotification(connecting)
         cameraGatt?.close()
-        cameraGatt = SonyCameraGatt(this, device, this)
+        cameraGatt = SonyCameraGatt(this, device, this).also { it.clockSync = prefs.syncCameraClockChoice }
         cameraGatt?.connect()
     }
 
@@ -371,6 +373,14 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
     override fun onBattery(battery: CameraBattery) {
         cameraBattery = battery
         statusListener?.onServiceCameraInfo()
+    }
+
+    override fun onClockSync(on: Boolean) {
+        // Until the user has used the switch it only mirrors what the camera says
+        if (prefs.syncCameraClockChoice != null) return
+        adoptingClockSync = true
+        prefs.syncCameraClock = on
+        adoptingClockSync = false
     }
 
     override fun onMedia(media: CameraMedia) {

@@ -32,8 +32,10 @@ import java.util.concurrent.TimeUnit
  *   0000DD21  READ   — capability flags; byte[4] & 0x02 → timezone support
  *   0000DD30  WRITE  — lock:            {0x01} = acquire, {0x00} = release
  *   0000DD31  WRITE  — location enable: {0x01} = on,      {0x00} = off
- *   0000DD32  READ   — time-correction setting (informational)
- *   0000DD33  READ   — area-adjustment setting (informational)
+ *   0000DD32  READ+WRITE — camera setting "auto time correction": {0x01} = the
+ *                          camera sets its clock from the GPS packets
+ *   0000DD33  READ+WRITE — camera setting "auto area adjustment": {0x01} = the
+ *                          camera sets its time zone from the GPS packets
  *
  * ── APO (Auto Power Off) avoidance ─────────────────────────────────────────
  *   The camera enters sleep/disconnects BLE after ~30 s of inactivity.
@@ -73,6 +75,8 @@ class SonyCameraGatt(
         fun onDisconnected()
         fun onBattery(battery: CameraBattery)
         fun onMedia(media: CameraMedia)
+        /** The camera's clock settings as read during the handshake; on = both are on. */
+        fun onClockSync(on: Boolean)
         fun onError(msg: String)
         fun onLog(msg: String)
     }
@@ -153,6 +157,21 @@ class SonyCameraGatt(
     private var awaitingMtu       = false
     private var disconnectAfterStop = false
     private var linkUp            = false
+    private var timeCorrectionOn: Boolean? = null
+    private var areaAdjustmentOn: Boolean? = null
+
+    /**
+     * Whether the camera should take date, time and time zone from the GPS
+     * packets. true / false switch its "auto time correction" and "auto area
+     * adjustment" settings on / off; null leaves the camera as it is. On
+     * current bodies the camera menu has no entry for them — the Sony app is
+     * the only other way to change them.
+     */
+    var clockSync: Boolean? = null
+        set(value) {
+            field = value
+            if (isLocationEnabled) requestClockSync()
+        }
 
     /**
      * One queued GATT operation. [start] returns false when Android refuses to
@@ -326,6 +345,8 @@ class SonyCameraGatt(
         stopKeepalive()
         isLocationEnabled = false
         awaitingMtu = false
+        timeCorrectionOn = null
+        areaAdjustmentOn = null
         opQueue.clear()
         opPending = false
     }
@@ -574,8 +595,37 @@ class SonyCameraGatt(
                 opDone()
             }
 
+            // ── DD32 / DD33 camera clock settings ────────────────────────
+            prefix.startsWith(CHAR_TIME_CORRECTION) || prefix.startsWith(CHAR_AREA_ADJUSTMENT) -> {
+                val isClock = prefix.startsWith(CHAR_TIME_CORRECTION)
+                val what = if (isClock) "clock" else "time zone"
+                when (status) {
+                    BluetoothGatt.GATT_SUCCESS -> {
+                        val on = value.contentEquals(LOC_ON)
+                        if (isClock) timeCorrectionOn = on else areaAdjustmentOn = on
+                        log(if (on) "Camera now sets its $what from GPS" else "Camera no longer sets its $what from GPS")
+                    }
+                    STATUS_LOCK_UNAVAILABLE ->
+                        log("Camera does not allow changing the $what setting right now (status $status)")
+                    else -> log("Changing the camera $what setting failed (status $status)")
+                }
+                opDone()
+            }
+
             else -> opDone()
         }
+    }
+
+    /** Brings the two camera clock settings in line with [clockSync]. Never fatal. */
+    private fun requestClockSync() {
+        val wanted = clockSync ?: return
+        val value  = if (wanted) LOC_ON else LOC_OFF
+        if (timeCorrectionOn == !wanted) enqueue(Op("Time correction setting", onStartFailed = {}) {
+            writeChar(GPS_SERVICE_UUID, CHAR_TIME_CORRECTION, value)
+        })
+        if (areaAdjustmentOn == !wanted) enqueue(Op("Area adjustment setting", onStartFailed = {}) {
+            writeChar(GPS_SERVICE_UUID, CHAR_AREA_ADJUSTMENT, value)
+        })
     }
 
     private fun isCameraInfo(prefix: String) = CAMERA_INFO_CHARS.any { prefix.startsWith(it) }
@@ -624,20 +674,25 @@ class SonyCameraGatt(
 
         when {
             prefix.startsWith(CHAR_TIME_CORRECTION) -> {
+                timeCorrectionOn = value.contentEquals(LOC_ON)
                 opDone(); enqueue(Op("Area-adjustment read") { readChar(GPS_SERVICE_UUID, CHAR_AREA_ADJUSTMENT) })
             }
             prefix.startsWith(CHAR_AREA_ADJUSTMENT) -> {
+                areaAdjustmentOn = value.contentEquals(LOC_ON)
                 opDone(); enqueue(Op("Capability read") { readChar(GPS_SERVICE_UUID, CHAR_CAPABILITY) })
             }
             prefix.startsWith(CHAR_CAPABILITY) -> {
                 timezoneSupport = value != null && value.size >= 5 && (value[4].toInt() and 0x02) != 0
                 log("Timezone support: $timezoneSupport")
+                log("Camera sets clock from GPS: $timeCorrectionOn, time zone: $areaAdjustmentOn")
                 isLocationEnabled = true
                 gpsWriteFailCount = 0
                 opDone()
                 // Start keepalive timer now that the session is fully active
                 startKeepalive()
                 listener.onReady()
+                listener.onClockSync(timeCorrectionOn == true && areaAdjustmentOn == true)
+                requestClockSync()
                 requestCameraInfo()
             }
             else -> opDone()

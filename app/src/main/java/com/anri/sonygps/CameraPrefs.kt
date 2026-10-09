@@ -11,6 +11,7 @@ import android.content.SharedPreferences
  *  - Auto-connect: start the session as soon as the remembered camera advertises.
  *  - Track recording: write every GPS fix of a session to a GPX file.
  *  - Battery saver: request GPS less often and with balanced priority.
+ *  - Camera clock: let the camera take date, time and time zone from the GPS packets.
  *  - Update check: when GitHub was last asked for a new release, and which
  *    release the user chose to skip.
  *
@@ -37,6 +38,19 @@ class CameraPrefs(context: Context) {
     var batterySaver: Boolean
         get()  = prefs.getBoolean(KEY_BATTERY_SAVER, false)
         set(v) = prefs.edit().putBoolean(KEY_BATTERY_SAVER, v).apply()
+
+    /**
+     * Whether the camera takes date, time and time zone from the GPS packets.
+     * Starts out mirroring the camera; once the user has used the switch it is
+     * enforced on every connect (see [syncCameraClockChoice]).
+     */
+    var syncCameraClock: Boolean
+        get()  = prefs.getBoolean(KEY_SYNC_CLOCK, false)
+        set(v) = prefs.edit().putBoolean(KEY_SYNC_CLOCK, v).apply()
+
+    /** [syncCameraClock], or null while nothing has been stored yet. */
+    val syncCameraClockChoice: Boolean?
+        get() = if (prefs.contains(KEY_SYNC_CLOCK)) prefs.getBoolean(KEY_SYNC_CLOCK, false) else null
 
     /** Fix interval in battery-saver mode (ms). Stored as a string because ListPreference does. */
     val saverIntervalMs: Long
@@ -95,6 +109,7 @@ class CameraPrefs(context: Context) {
         const val KEY_RECORD_TRACK   = "record_track"
         const val KEY_BATTERY_SAVER  = "battery_saver"
         const val KEY_SAVER_INTERVAL = "saver_interval_sec"
+        const val KEY_SYNC_CLOCK     = "sync_camera_clock"
         const val KEY_APP_LANGUAGE   = "app_language"
         const val DEFAULT_SAVER_INTERVAL_SEC = 20L
 

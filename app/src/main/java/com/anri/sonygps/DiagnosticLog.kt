@@ -184,6 +184,7 @@ object DiagnosticLog {
         line(s(R.string.diag_battery_saver), res.getString(
             R.string.diag_battery_saver_fmt, onOff(prefs.batterySaver), prefs.saverIntervalMs / 1000))
         line(s(R.string.diag_gpx), onOff(prefs.recordTrack))
+        line(s(R.string.diag_clock_sync), onOff(prefs.syncCameraClock))
         val snooze = prefs.autoConnectSnoozeUntil
         line(s(R.string.diag_snooze_until), if (snooze > System.currentTimeMillis()) time(snooze) else "—")
         line(s(R.string.diag_last_attempt), timeOrDash(prefs.lastAutoConnectAttempt))

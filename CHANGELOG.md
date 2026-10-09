@@ -19,6 +19,10 @@ Regeln für Einträge:
 - **Freier Platz auf der Speicherkarte:** Direkt darunter steht, für wie viele
   Fotos auf der Karte noch Platz ist — im Videomodus stattdessen die restliche
   Aufnahmezeit — oder dass keine Karte eingelegt ist.
+- **Kamera-Uhr über GPS stellen:** Neuer Schalter in den Einstellungen. Er steuert,
+  ob die Kamera Datum, Uhrzeit und Zeitzone vom Handy übernimmt — bisher ging das
+  nur über die Sony-App. Beim ersten Verbinden zeigt er, was an der Kamera
+  eingestellt ist; geändert wird dort erst etwas, wenn du ihn umlegst.
 
 ### Geändert
 - **Klarere Fehlermeldung beim Verbinden:** Lehnt die Kamera die Standortkopplung
