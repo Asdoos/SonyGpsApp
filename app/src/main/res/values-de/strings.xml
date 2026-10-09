@@ -10,6 +10,7 @@
     <string name="hint_connecting">Das dauert meist nur wenige Sekunden.</string>
     <string name="hint_active_fmt">%s erhält deine Position. Du kannst die App jetzt schließen.</string>
     <string name="hint_lost">Verbinde dich erneut, sobald du bereit bist.</string>
+    <string name="hint_reconnecting_fmt">%s wird erneut gesucht. Prüfe, ob die Kamera eingeschaltet und in der Nähe ist.</string>
     <string name="hint_scan_failed_fmt">Prüfe, ob Bluetooth eingeschaltet ist, und versuche es erneut. (Code %d)</string>
     <string name="status_scan_failed">Suche fehlgeschlagen</string>
     <string name="status_not_found">Keine Kamera gefunden</string>
@@ -76,6 +77,7 @@
     <string name="status_gps_active">Standort wird übertragen</string>
     <string name="log_gps_active">GPS aktiv, APO-Keepalive alle 9 s</string>
     <string name="status_disconnected">Verbindung beendet</string>
+    <string name="status_reconnecting">Verbindung wird wiederhergestellt…</string>
     <string name="log_disconnected">Verbindung getrennt</string>
     <string name="mode_auto_connect">Auto-Verbinden</string>
     <string name="mode_battery_saver_fmt">Akku sparen (%d s)</string>

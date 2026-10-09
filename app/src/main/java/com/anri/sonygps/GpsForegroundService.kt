@@ -91,6 +91,8 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
 
     private var userStopped      = false
     private var reconnectCount   = 0
+    /** True between a lost link and the next successful handshake. */
+    val isReconnecting get() = reconnectCount > 0
     private val handler          = Handler(Looper.getMainLooper())
     private val reconnectRunnable = Runnable { attemptReconnect() }
 
@@ -521,8 +523,7 @@ class GpsForegroundService : Service(), SonyCameraGatt.Listener {
             finishSession()
             return
         }
-        gatt.stopTransfer()
-        gatt.disconnect()
+        gatt.stopAndDisconnect()
         // onDisconnected() will call finishSession() once BLE confirms
     }
 

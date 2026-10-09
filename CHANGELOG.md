@@ -12,6 +12,31 @@ Regeln für Einträge:
 
 ## [Unreleased]
 
+### Geändert
+- **Klarere Fehlermeldung beim Verbinden:** Lehnt die Kamera die Standortkopplung
+  ab, steht im Protokoll jetzt, warum — Standortkopplung im Kameramenü aus oder
+  die Kamera ist noch mit einem anderen Gerät (z. B. Creators' App) gekoppelt.
+- Die Verbindung handelt wie die Sony-App zuerst eine größere Paketgröße aus,
+  damit ein GPS-Paket in eine einzelne Übertragung passt.
+
+### Behoben
+- **Verbindung bleibt bei „Verbindung wird eingerichtet…“ hängen:** Antwortete die Kamera
+  auf einen Schritt des Verbindungsaufbaus nicht oder nahm Android ihn nicht an,
+  wartete die App endlos. Jetzt wird die Verbindung nach spätestens 30 Sekunden
+  getrennt und neu aufgebaut.
+- **Statusanzeige bei Verbindungsverlust:** Schaltete sich die Kamera aus, stand
+  auf dem Hauptbildschirm „Verbindung beendet“, obwohl die App im Hintergrund
+  weiter versuchte, sie zu erreichen. Jetzt steht dort „Verbindung wird
+  wiederhergestellt…“, bis die Kamera wieder da ist oder die App aufgibt.
+- **„Trennen“ während des Verbindens blieb hängen:** Tippte man auf „Trennen“,
+  während die App die Kamera gerade suchte, passierte nichts mehr — die Sitzung
+  lief endlos weiter. Jetzt endet sie sofort.
+- **Sauberes Trennen:** Beim Tippen auf „Trennen“ wurde die Verbindung gekappt,
+  bevor die Kamera die Standortkopplung wieder freigeben konnte. Die App meldet
+  sich jetzt erst ordentlich ab und trennt dann.
+- Seltene Aussetzer, wenn ein GPS-Paket und eine Antwort der Kamera gleichzeitig
+  verarbeitet wurden.
+
 ## [0.10.0] - 2026-09-15
 
 ### Geändert

@@ -96,7 +96,7 @@ UUID: 8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF
 
 ### 3. Connection Protocol (Handshake Sequence)
 
-After GATT connect and service discovery, the following sequence is executed:
+After GATT connect the app requests an MTU of 158 (as the Sony app does, so the 91/95-byte payload fits a single write) and then discovers services. After that the following sequence is executed:
 
 ```
 ① enableNotify(DD01)         — camera can abort transfer at any time
@@ -114,7 +114,9 @@ After GATT connect and service discovery, the following sequence is executed:
 ⑦ → onReady(): start GPS updates + APO keepalive timer
 ```
 
-All GATT operations run **serialised** through an `ArrayDeque`-based op-queue, since BLE only permits one concurrent operation. Each operation is only started once the callback of the previous one has been received.
+All GATT operations run **serialised** through an `ArrayDeque`-based op-queue, since BLE only permits one concurrent operation. Each operation is only started once the callback of the previous one has been received. GATT callbacks are re-posted to the main thread, so the queue is only ever touched there.
+
+If a step fails, cannot be started, or the camera does not answer within 10 s (30 s for MTU exchange + service discovery), the link is dropped and the normal reconnect logic takes over. On the lock write (②) the camera uses two specific status codes: `157` = location linking is disabled on the camera, `159` = the lock is held by another device (e.g. the Sony Creators' App).
 
 ---
 

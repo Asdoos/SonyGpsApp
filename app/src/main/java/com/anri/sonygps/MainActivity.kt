@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
 
     // ── Screen state ─────────────────────────────────────────────────────────
 
-    private enum class Phase { IDLE, SCANNING, NOT_FOUND, CONNECTING, LINKING, ACTIVE, ENDED, SCAN_FAILED }
+    private enum class Phase { IDLE, SCANNING, NOT_FOUND, CONNECTING, LINKING, ACTIVE, RECONNECTING, ENDED, SCAN_FAILED }
 
     private var phase = Phase.IDLE
     /** Camera the current attempt targets (for the hero text). */
@@ -328,7 +328,9 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
 
     override fun onServiceDisconnected() {
         clearPosition()
-        phase = Phase.ENDED
+        // The session outlives the link while the service retries; render() moves on
+        // to ENDED once the service gives the session up.
+        phase = if (GpsForegroundService.sessionActive) Phase.RECONNECTING else Phase.ENDED
         log(getString(R.string.log_disconnected))
         render()
     }
@@ -358,7 +360,10 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         when {
             svc.isReady     -> { phase = Phase.ACTIVE;     targetName = name }
             svc.isConnected -> { phase = Phase.LINKING;    targetName = name }
-            GpsForegroundService.sessionActive -> { phase = Phase.CONNECTING; targetName = name }
+            GpsForegroundService.sessionActive -> {
+                phase = if (svc.isReconnecting) Phase.RECONNECTING else Phase.CONNECTING
+                targetName = name
+            }
         }
         render()
     }
@@ -376,7 +381,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
 
         // A session the service gave up on (reconnects exhausted, stopped from the
         // notification) ends without a callback of its own.
-        if (phase in listOf(Phase.CONNECTING, Phase.LINKING, Phase.ACTIVE) &&
+        if (phase in listOf(Phase.CONNECTING, Phase.LINKING, Phase.ACTIVE, Phase.RECONNECTING) &&
             sessionSeen && !session && !connected) {
             clearPosition()
             phase = Phase.ENDED
@@ -404,6 +409,9 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
             Phase.ACTIVE -> hero(
                 R.string.status_gps_active, getString(R.string.hint_active_fmt, targetName ?: cameraName),
                 R.drawable.ic_check_circle, Tone.ACTIVE, busy = false)
+            Phase.RECONNECTING -> hero(
+                R.string.status_reconnecting, getString(R.string.hint_reconnecting_fmt, targetName ?: cameraName),
+                R.drawable.ic_sync, Tone.BUSY, busy = true)
             Phase.ENDED -> hero(
                 R.string.status_disconnected, getString(R.string.hint_lost),
                 R.drawable.ic_bluetooth_disabled, Tone.NEUTRAL, busy = false)
