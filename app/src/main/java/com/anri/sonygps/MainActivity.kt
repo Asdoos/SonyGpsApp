@@ -439,9 +439,7 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         // ── Memory card ──
         val media = gpsService?.cameraMedia
         if (phase == Phase.ACTIVE && media != null) {
-            binding.tvCameraMedia.text =
-                if (media.hasCard) resources.getQuantityString(R.plurals.camera_media_shots, media.remainingShots, media.remainingShots)
-                else getString(R.string.camera_media_no_card)
+            binding.tvCameraMedia.text = mediaText(media)
             binding.tvCameraMedia.visibility = View.VISIBLE
         } else {
             binding.tvCameraMedia.visibility = View.GONE
@@ -497,6 +495,20 @@ class MainActivity : AppCompatActivity(), GpsForegroundService.StatusListener {
         }
         binding.statusIconFrame.backgroundTintList = ColorStateList.valueOf(bg)
         binding.ivStatus.imageTintList             = ColorStateList.valueOf(fg)
+    }
+
+    /** Remaining shots in photo mode, remaining recording time in movie mode. */
+    private fun mediaText(media: CameraMedia): String {
+        val shots   = media.remainingShots
+        val seconds = media.remainingSeconds
+        return when {
+            !media.hasCard  -> getString(R.string.camera_media_no_card)
+            shots != null   -> resources.getQuantityString(R.plurals.camera_media_shots, shots, shots)
+            seconds != null && seconds >= 3600 ->
+                getString(R.string.camera_media_video_hm_fmt, seconds / 3600, seconds % 3600 / 60)
+            seconds != null -> getString(R.string.camera_media_video_m_fmt, seconds / 60)
+            else            -> getString(R.string.camera_media_no_card)
+        }
     }
 
     private fun attr(@AttrRes id: Int) = MaterialColors.getColor(binding.root, id)

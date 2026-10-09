@@ -16,6 +16,8 @@
     <string name="camera_battery_fmt">Camera battery %1$d %%</string>
     <string name="camera_battery_usb_fmt">Camera battery %1$d %% · USB power</string>
     <string name="camera_media_no_card">No memory card</string>
+    <string name="camera_media_video_hm_fmt">Room for %1$d h %2$d min of video</string>
+    <string name="camera_media_video_m_fmt">Room for %1$d min of video</string>
     <plurals name="camera_media_shots">
         <item quantity="one">Room for %1$d shot</item>
         <item quantity="other">Room for %1$d shots</item>

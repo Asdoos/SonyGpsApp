@@ -13,6 +13,8 @@
     <string name="camera_battery_fmt">Kamera-Akku %1$d %%</string>
     <string name="camera_battery_usb_fmt">Kamera-Akku %1$d %% · USB-Strom</string>
     <string name="camera_media_no_card">Keine Speicherkarte</string>
+    <string name="camera_media_video_hm_fmt">Platz für %1$d h %2$d min Video</string>
+    <string name="camera_media_video_m_fmt">Platz für %1$d min Video</string>
     <plurals name="camera_media_shots">
         <item quantity="one">Platz für %1$d Aufnahme</item>
         <item quantity="other">Platz für %1$d Aufnahmen</item>
